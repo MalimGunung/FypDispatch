@@ -1,0 +1,2 @@
+C:/Extra_file/Pictures/Saved Pictures/flutter/fyp_gemini/android/app/.cxx/Debug/o3e3f2y4/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Extra_file/Pictures/Saved Pictures/flutter/fyp_gemini/android/app/.cxx/Debug/o3e3f2y4/armeabi-v7a/CMakeFiles/rebuild_cache.dir

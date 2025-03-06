@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "84620105809",
+    "project_id": "delivery-7e268",
+    "storage_bucket": "delivery-7e268.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:84620105809:android:fa0b31310ed6fd56258070",
+        "android_client_info": {
+          "package_name": "com.example.fyp_gemini"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCo0_suiw5NmUQf34lGAkfxlJdLvR01NvI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
