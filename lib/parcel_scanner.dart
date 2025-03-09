@@ -4,6 +4,7 @@ import 'mlkit_ocr.dart';
 import 'camera_screen.dart';
 import 'package:geocoding/geocoding.dart';
 import 'optimized_delivery_screen.dart';
+import 'map_screen.dart';
 
 class ParcelScanning extends StatefulWidget {
   @override
@@ -25,7 +26,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
   // ✅ Fetch stored addresses from Firebase
   Future<void> fetchStoredAddresses() async {
     setState(() => isLoading = true);
-    List<Map<String, dynamic>> storedAddresses = await firebaseService.getStoredAddresses();
+    List<Map<String, dynamic>> storedAddresses =
+        await firebaseService.getStoredAddresses();
     setState(() {
       addressList = storedAddresses;
       isLoading = false;
@@ -36,7 +38,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
   Future<void> scanParcel() async {
     final imagePath = await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => CameraScreen()), // ✅ Call CameraScreen
+      MaterialPageRoute(
+          builder: (context) => CameraScreen()), // ✅ Call CameraScreen
     );
 
     if (imagePath != null) {
@@ -44,14 +47,17 @@ class _ParcelScanningState extends State<ParcelScanning> {
 
       if (address.isEmpty || address == "No valid address detected") {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ No valid address detected. Please try again.")),
+          SnackBar(
+              content: Text("❌ No valid address detected. Please try again.")),
         );
         return;
       }
 
       var coordinates = await getCoordinates(address);
 
-      if (coordinates == null || !coordinates.containsKey("latitude") || !coordinates.containsKey("longitude")) {
+      if (coordinates == null ||
+          !coordinates.containsKey("latitude") ||
+          !coordinates.containsKey("longitude")) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("❌ Failed to get location for this address!")),
         );
@@ -84,7 +90,10 @@ class _ParcelScanningState extends State<ParcelScanning> {
     try {
       List<Location> locations = await locationFromAddress(address);
       if (locations.isNotEmpty) {
-        return {"latitude": locations.first.latitude, "longitude": locations.first.longitude};
+        return {
+          "latitude": locations.first.latitude,
+          "longitude": locations.first.longitude
+        };
       }
     } catch (e) {
       print("❌ Geocoding Error: $e");
@@ -100,7 +109,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
 
   // ✅ Edit an address
   Future<void> editAddress(String documentId, String currentAddress) async {
-    TextEditingController addressController = TextEditingController(text: currentAddress);
+    TextEditingController addressController =
+        TextEditingController(text: currentAddress);
 
     showDialog(
       context: context,
@@ -127,7 +137,9 @@ class _ParcelScanningState extends State<ParcelScanning> {
                     fetchStoredAddresses();
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("❌ Failed to get location for the new address!")),
+                      SnackBar(
+                          content: Text(
+                              "❌ Failed to get location for the new address!")),
                     );
                   }
                 }
@@ -161,19 +173,22 @@ class _ParcelScanningState extends State<ParcelScanning> {
                         itemBuilder: (context, index) {
                           return Card(
                             elevation: 4,
-                            margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            margin: EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 6),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: ListTile(
-                              leading: Icon(Icons.location_on, color: Colors.red, size: 30),
+                              leading: Icon(Icons.location_on,
+                                  color: Colors.red, size: 30),
                               title: Text(
                                 addressList[index]["address"],
                                 style: TextStyle(fontWeight: FontWeight.bold),
                               ),
                               subtitle: Text(
                                 "📍 Lat: ${addressList[index]["latitude"]}, Lon: ${addressList[index]["longitude"]}",
-                                style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                                style: TextStyle(
+                                    fontSize: 14, color: Colors.grey[700]),
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
@@ -192,17 +207,20 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                         context: context,
                                         builder: (context) => AlertDialog(
                                           title: Text("Confirm Delete"),
-                                          content: Text("Are you sure you want to delete this address?"),
+                                          content: Text(
+                                              "Are you sure you want to delete this address?"),
                                           actions: [
                                             TextButton(
                                               onPressed: () {
-                                                deleteAddress(addressList[index]["id"]);
+                                                deleteAddress(
+                                                    addressList[index]["id"]);
                                                 Navigator.pop(context);
                                               },
                                               child: Text("Delete"),
                                             ),
                                             TextButton(
-                                              onPressed: () => Navigator.pop(context),
+                                              onPressed: () =>
+                                                  Navigator.pop(context),
                                               child: Text("Cancel"),
                                             ),
                                           ],
@@ -226,9 +244,17 @@ class _ParcelScanningState extends State<ParcelScanning> {
           ElevatedButton(
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => OptimizedDeliveryScreen()),
+              MaterialPageRoute(
+                  builder: (context) => OptimizedDeliveryScreen()),
             ),
             child: Text("🗺 Generate Optimized Delivery List"),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => MapScreen()),
+            ),
+            child: Text("📍 View Optimized Route on Map"),
           ),
         ],
       ),
