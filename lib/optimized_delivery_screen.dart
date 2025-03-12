@@ -48,33 +48,30 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                     style: TextStyle(fontSize: 18, color: Colors.red),
                   ),
                 )
-              : RefreshIndicator(
-                  onRefresh: fetchDeliveryList,
-                  child: ListView.builder(
-                    itemCount: deliveryList.length,
-                    itemBuilder: (context, index) {
-                      final delivery = deliveryList[index];
+              : ListView.builder(
+                  itemCount: deliveryList.length,
+                  itemBuilder: (context, index) {
+                    final delivery = deliveryList[index];
 
-                      return Card(
-                        margin: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                        elevation: 5,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                    return Card(
+                      margin: EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                      elevation: 5,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListTile(
+                        leading: Icon(Icons.location_pin, color: Colors.red, size: 30),
+                        title: Text(
+                          "${index + 1}. ${delivery["address"]}",
+                          style: TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        child: ListTile(
-                          leading: Icon(Icons.location_pin, color: Colors.red, size: 30),
-                          title: Text(
-                            "${index + 1}. ${delivery["address"]}",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(
-                            "📍 Lat: ${delivery["latitude"]}, Lon: ${delivery["longitude"]}",
-                            style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                          ),
+                        subtitle: Text(
+                          "📍 Lat: ${delivery["latitude"]}, Lon: ${delivery["longitude"]}",
+                          style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
                 ),
     );
   }

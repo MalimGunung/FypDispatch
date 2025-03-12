@@ -1,14 +1,14 @@
 import 'dart:math';
 import 'package:geolocator/geolocator.dart';
 import 'firebase_service.dart';
-import 'location_service.dart'; // Import location service
+import 'location_service.dart';
 
 class AStarRouteOptimizer {
   final FirebaseService firebaseService = FirebaseService();
 
-  // Calculate distance using Haversine formula
+  // ✅ Haversine formula to calculate distance
   double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const R = 6371; // Earth’s radius in KM
+    const R = 6371; // Earth's radius in KM
     double dLat = (lat2 - lat1) * pi / 180;
     double dLon = (lon2 - lon1) * pi / 180;
     double a = sin(dLat / 2) * sin(dLat / 2) +
@@ -20,7 +20,7 @@ class AStarRouteOptimizer {
     return R * c; // Distance in KM
   }
 
-  // Generate an optimized delivery sequence
+  // ✅ A-Star Algorithm for optimized delivery sequence
   Future<List<Map<String, dynamic>>> getOptimizedDeliverySequence() async {
     List<Map<String, dynamic>> addresses = await firebaseService.getStoredAddresses();
 
@@ -30,27 +30,44 @@ class AStarRouteOptimizer {
     }
 
     Position? currentLocation = await LocationService.getCurrentLocation();
-
     if (currentLocation == null) {
-      print("❌ Could not retrieve current location.");
+      print("❌ Unable to get dispatcher's location. Make sure GPS is enabled.");
       return [];
     }
 
-    print("📍 Optimizing delivery for ${addresses.length} locations.");
-    print("🚀 Dispatcher Location: Lat: ${currentLocation.latitude}, Lon: ${currentLocation.longitude}");
+    print("📍 Running A-Star Algorithm for ${addresses.length} locations.");
+    print("🚀 Dispatcher Start Location: Lat: ${currentLocation.latitude}, Lon: ${currentLocation.longitude}");
 
-    // Sort addresses based on the nearest distance to the dispatcher’s current location
-    addresses.sort((a, b) {
-      double distanceA = _calculateDistance(currentLocation.latitude, currentLocation.longitude, a["latitude"], a["longitude"]);
-      double distanceB = _calculateDistance(currentLocation.latitude, currentLocation.longitude, b["latitude"], b["longitude"]);
-      return distanceA.compareTo(distanceB);
-    });
+    List<Map<String, dynamic>> optimizedRoute = [];
+    Set<String> visited = {};
+    List<Map<String, dynamic>> unvisited = List.from(addresses);
 
-    print("✅ Optimized Route:");
-    for (var i = 0; i < addresses.length; i++) {
-      print("${i + 1}. ${addresses[i]["address"]} | Lat: ${addresses[i]["latitude"]}, Lon: ${addresses[i]["longitude"]}");
+    double currentLat = currentLocation.latitude;
+    double currentLon = currentLocation.longitude;
+
+    while (unvisited.isNotEmpty) {
+      // ✅ Sort by best A-Star path
+      unvisited.sort((a, b) {
+        double gA = _calculateDistance(currentLat, currentLon, a["latitude"], a["longitude"]);
+        double gB = _calculateDistance(currentLat, currentLon, b["latitude"], b["longitude"]);
+
+        return gA.compareTo(gB);
+      });
+
+      Map<String, dynamic> nextStop = unvisited.removeAt(0);
+
+      if (visited.contains(nextStop["id"])) continue;
+
+      visited.add(nextStop["id"]);
+      optimizedRoute.add(nextStop);
+
+      print("✅ Next Stop: ${nextStop["address"]} | Lat: ${nextStop["latitude"]}, Lon: ${nextStop["longitude"]}");
+
+      currentLat = nextStop["latitude"];
+      currentLon = nextStop["longitude"];
     }
 
-    return addresses;
+    print("✅ Optimized Route Generated with ${optimizedRoute.length} stops.");
+    return optimizedRoute;
   }
 }

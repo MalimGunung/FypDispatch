@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class FirebaseService {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-  // ✅ Save parcel data
+  // ✅ Save scanned parcel data
   Future<void> saveParcelData(String address, double latitude, double longitude) async {
     try {
       await firestore.collection("parcels").add({
@@ -18,7 +18,7 @@ class FirebaseService {
     }
   }
 
-  // ✅ Fetch stored addresses from Firestore
+  // ✅ Fetch stored addresses from Firebase
   Future<List<Map<String, dynamic>>> getStoredAddresses() async {
     List<Map<String, dynamic>> addressList = [];
     try {
@@ -31,15 +31,15 @@ class FirebaseService {
 
         if (data.containsKey("latitude") && data.containsKey("longitude") && data.containsKey("address")) {
           addressList.add({
-            "id": doc.id, // Store document ID for deletion
+            "id": doc.id,
             "address": data["address"],
             "latitude": data["latitude"],
             "longitude": data["longitude"],
           });
 
-          print("✅ Retrieved: ${data['address']} | Lat: ${data['latitude']} | Lon: ${data['longitude']}");
+          print("✅ Retrieved Address: ${data['address']} | Lat: ${data['latitude']} | Lon: ${data['longitude']}");
         } else {
-          print("❌ Missing data in document: ${doc.id}");
+          print("❌ Missing fields in document: ${doc.id}");
         }
       }
 
