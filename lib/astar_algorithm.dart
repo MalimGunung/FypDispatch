@@ -1,5 +1,5 @@
 import 'dart:math';
-import 'package:collection/collection.dart'; // ✅ Import built-in PriorityQueue
+import 'package:collection/collection.dart';// ✅ Import built-in PriorityQueue
 import 'package:geolocator/geolocator.dart';
 import 'firebase_service.dart';
 import 'location_service.dart';
@@ -7,7 +7,7 @@ import 'location_service.dart';
 class AStarRouteOptimizer {
   final FirebaseService firebaseService = FirebaseService();
 
-  // ✅ Haversine formula to calculate distance
+  // ✅ Haversine formula to calculate distance between two points
   double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
     const R = 6371; // Earth's radius in KM
     double dLat = (lat2 - lat1) * pi / 180;
@@ -46,14 +46,39 @@ class AStarRouteOptimizer {
     PriorityQueue<Map<String, dynamic>> openSet = PriorityQueue<Map<String, dynamic>>(
         (a, b) => (a["fScore"] as double).compareTo(b["fScore"] as double));
 
-    // Start from current location
+    // ✅ Set the first location as the dispatcher's GPS location
     double startLat = currentLocation.latitude;
     double startLon = currentLocation.longitude;
 
-    // ✅ Add all locations to priority queue with fScore = gScore + hScore
+    // ✅ Find the first closest delivery stop to start from
+    Map<String, dynamic>? firstStop;
+    double minDistance = double.infinity;
+
+    for (var address in addresses) {
+      double distance = _calculateDistance(startLat, startLon, address["latitude"], address["longitude"]);
+      if (distance < minDistance) {
+        minDistance = distance;
+        firstStop = address;
+      }
+    }
+
+    if (firstStop == null) {
+      print("❌ No valid first stop found.");
+      return [];
+    }
+
+    optimizedRoute.add(firstStop);
+    visited.add(firstStop["id"]);
+    startLat = firstStop["latitude"];
+    startLon = firstStop["longitude"];
+    addresses.remove(firstStop);
+
+    // ✅ Add remaining locations to priority queue with fScore = gScore + hScore
     for (var address in addresses) {
       double gScore = _calculateDistance(startLat, startLon, address["latitude"], address["longitude"]);
-      double hScore = _calculateDistance(address["latitude"], address["longitude"], addresses.first["latitude"], addresses.first["longitude"]);
+      double hScore = addresses.isNotEmpty
+          ? _calculateDistance(address["latitude"], address["longitude"], addresses[0]["latitude"], addresses[0]["longitude"])
+          : 0;
       address["gScore"] = gScore;
       address["hScore"] = hScore;
       address["fScore"] = gScore + hScore;
@@ -80,7 +105,9 @@ class AStarRouteOptimizer {
         if (visited.contains(address["id"])) continue;
 
         double gScore = _calculateDistance(startLat, startLon, address["latitude"], address["longitude"]);
-        double hScore = _calculateDistance(address["latitude"], address["longitude"], addresses.first["latitude"], addresses.first["longitude"]);
+        double hScore = addresses.isNotEmpty
+            ? _calculateDistance(address["latitude"], address["longitude"], addresses[0]["latitude"], addresses[0]["longitude"])
+            : 0;
         address["gScore"] = gScore;
         address["hScore"] = hScore;
         address["fScore"] = gScore + hScore;

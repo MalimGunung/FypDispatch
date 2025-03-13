@@ -1,4 +1,5 @@
 import 'package:geolocator/geolocator.dart';
+import 'package:collection/collection.dart';// ✅ Import built-in PriorityQueue
 
 class LocationService {
   // ✅ Request location permissions at runtime
