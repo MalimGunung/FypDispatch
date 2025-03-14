@@ -12,6 +12,8 @@ dependencies:
   google_mlkit_text_recognition: ^0.14.0
   image_picker: ^1.1.2
   path_provider: ^2.1.5
+  flutter_polyline_points: ^2.1.0
+
 
 dev_dependencies:
   flutter_test:
@@ -27,7 +29,8 @@ dev_dependencies:
   geolocator: ^13.0.2
   geocoding: ^3.0.0
   google_maps_flutter: ^2.10.1
-  flutter_polyline_points: ^2.1.0
+  
+
 
 flutter:
   uses-material-design: true
