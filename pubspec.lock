@@ -377,7 +377,7 @@ packages:
     source: hosted
     version: "8.1.1"
   google_maps_flutter:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: google_maps_flutter
       sha256: "621125e35e81ca39ef600e45243d2be93167e61def72bc7207b0c4a635c58506"

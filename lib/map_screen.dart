@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'firebase_service.dart';
 import 'astar_algorithm.dart';
 import 'location_service.dart';
-
 
 class MapScreen extends StatefulWidget {
   @override
@@ -21,10 +19,9 @@ class _MapScreenState extends State<MapScreen> {
   Set<Marker> markers = {};
   Set<Polyline> polylines = {};
   Position? currentPosition;
-  PolylinePoints polylinePoints = PolylinePoints();
   
-  // ✅ Ensure you have a valid Google API Key
-  String googleApiKey = "AIzaSyCo0_suiw5NmUQf34lGAkfxlJdLvR01NvI"; // 🔥 Replace this with your actual API Key
+  // ✅ Replace with your valid Google API Key
+  String googleApiKey = "AIzaSyCo0_suiw5NmUQf34lGAkfxlJdLvR01NvI";
 
   @override
   void initState() {
@@ -33,75 +30,112 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // ✅ Fetch delivery locations and generate optimized route
-  Future<void> fetchDeliveryLocations() async {
-    Position? position = await LocationService.getCurrentLocation();
-    if (position == null) {
-      print("❌ Error: Could not retrieve current location.");
-      return;
-    }
-
-    currentPosition = position;
-    List<Map<String, dynamic>> optimizedRoute = await optimizer.getOptimizedDeliverySequence();
-
-    if (optimizedRoute.isNotEmpty) {
-      setState(() {
-        deliveryPoints = optimizedRoute
-            .map((address) => LatLng(address["latitude"], address["longitude"]))
-            .toList();
-
-        markers = optimizedRoute.map((address) {
-          return Marker(
-            markerId: MarkerId(address["address"]),
-            position: LatLng(address["latitude"], address["longitude"]),
-            infoWindow: InfoWindow(title: address["address"]),
-          );
-        }).toSet();
-      });
-
-      // ✅ Generate directions route using Google API
-      getRouteFromGoogleMaps();
-    }
+Future<void> fetchDeliveryLocations() async {
+  Position? position = await LocationService.getCurrentLocation();
+  if (position == null) {
+    print("❌ Error: Could not retrieve current location.");
+    return;
   }
 
-  // ✅ Get actual route using Google Directions API
-Future<void> getRouteFromGoogleMaps() async {
-  if (deliveryPoints.isEmpty) return;
+  currentPosition = position;
+  List<Map<String, dynamic>> optimizedRoute = await optimizer.getOptimizedDeliverySequence();
 
-  List<LatLng> routePoints = [];
+  if (optimizedRoute.isNotEmpty) {
+    setState(() {
+      deliveryPoints = optimizedRoute
+          .map((address) => LatLng(address["latitude"], address["longitude"]))
+          .toList();
 
-  for (int i = 0; i < deliveryPoints.length - 1; i++) {
-    PolylineResult polylineResult = await polylinePoints.getRouteBetweenCoordinates(
-      googleApiKey: googleApiKey, // ✅ Ensure API Key is valid
-      request: PolylineRequest(
-        origin: PointLatLng(deliveryPoints[i].latitude, deliveryPoints[i].longitude),
-        destination: PointLatLng(deliveryPoints[i + 1].latitude, deliveryPoints[i + 1].longitude),
-        mode: TravelMode.driving, // ✅ FIXED: Use `mode` instead of `travelMode`
-        optimizeWaypoints: true, // ✅ Ensure Google optimizes waypoints
-      ),
-    );
+      markers.clear(); // Clear existing markers
 
-    if (polylineResult.status == "OK" && polylineResult.points.isNotEmpty) {
-      setState(() {
-        polylines.add(
-          Polyline(
-            polylineId: PolylineId("optimized_route_${i}"),
-            points: polylineResult.points.map((e) => LatLng(e.latitude, e.longitude)).toList(),
-            color: Colors.blue,
-            width: 5,
+      // ✅ Add dispatcher location as Marker 0
+      markers.add(
+        Marker(
+          markerId: MarkerId("0"),
+          position: LatLng(currentPosition!.latitude, currentPosition!.longitude),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          infoWindow: InfoWindow(title: "Start Location"),
+        ),
+      );
+
+      // ✅ Add numbered markers for delivery points
+      for (int i = 0; i < deliveryPoints.length; i++) {
+        markers.add(
+          Marker(
+            markerId: MarkerId((i + 1).toString()), // Numbered marker
+            position: deliveryPoints[i],
+            icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+            infoWindow: InfoWindow(title: "Stop ${i + 1}"),
           ),
         );
-      });
-    } else {
-      print("❌ Google Directions API Error: ${polylineResult.status}");
-    }
-  }
+      }
+    });
 
-  if (polylines.isEmpty) {
-    print("❌ No route found. Ensure Google Routes API is enabled.");
-  } else {
-    print("✅ Route successfully generated!");
+    // ✅ Generate polyline starting from dispatcher’s location
+    getRouteFromGoogleMaps();
   }
 }
+
+
+  // ✅ Get actual route using Google Routes API
+Future<void> getRouteFromGoogleMaps() async {
+  if (deliveryPoints.isEmpty || currentPosition == null) return;
+
+  setState(() {
+    polylines.clear(); // Clear previous polylines
+
+    // ✅ Add current location as the first point in the polyline
+    List<LatLng> routePoints = [
+      LatLng(currentPosition!.latitude, currentPosition!.longitude), // Dispatcher’s location
+      ...deliveryPoints, // Followed by delivery stops
+    ];
+
+    polylines.add(
+      Polyline(
+        polylineId: PolylineId("straight_line_route"),
+        points: routePoints, // ✅ Connect current location to delivery points
+        color: Colors.blue,
+        width: 5,
+      ),
+    );
+  });
+
+  print("✅ Straight-line polyline successfully generated from current location!");
+}
+
+
+
+  // ✅ Decode Google Polyline to display actual navigation path
+  List<LatLng> decodePolyline(String encoded) {
+    List<LatLng> polyline = [];
+    int index = 0, len = encoded.length;
+    int lat = 0, lng = 0;
+
+    while (index < len) {
+      int shift = 0, result = 0;
+      int byte;
+      do {
+        byte = encoded.codeUnitAt(index++) - 63;
+        result |= (byte & 0x1F) << shift;
+        shift += 5;
+      } while (byte >= 0x20);
+      int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lat += dlat;
+
+      shift = 0;
+      result = 0;
+      do {
+        byte = encoded.codeUnitAt(index++) - 63;
+        result |= (byte & 0x1F) << shift;
+        shift += 5;
+      } while (byte >= 0x20);
+      int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
+      lng += dlng;
+
+      polyline.add(LatLng(lat / 1E5, lng / 1E5));
+    }
+    return polyline;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -124,4 +158,3 @@ Future<void> getRouteFromGoogleMaps() async {
     );
   }
 }
-
