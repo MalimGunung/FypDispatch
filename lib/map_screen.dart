@@ -4,6 +4,7 @@ import 'package:geolocator/geolocator.dart';
 import 'firebase_service.dart';
 import 'astar_algorithm.dart';
 import 'location_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MapScreen extends StatefulWidget {
   @override
@@ -28,6 +29,18 @@ class _MapScreenState extends State<MapScreen> {
     super.initState();
     fetchDeliveryLocations();
   }
+
+void launchWazeNavigation(LatLng destination) async {
+  final Uri wazeUrl = Uri.parse("waze://?ll=${destination.latitude},${destination.longitude}&navigate=yes");
+  final Uri fallbackUrl = Uri.parse("https://waze.com/ul?ll=${destination.latitude},${destination.longitude}&navigate=yes");
+
+  if (await canLaunchUrl(wazeUrl)) {
+    await launchUrl(wazeUrl, mode: LaunchMode.externalApplication);
+  } else {
+    print("⚠️ Waze app not installed, opening in browser.");
+    await launchUrl(fallbackUrl, mode: LaunchMode.externalApplication);
+  }
+}
 
   // ✅ Fetch delivery locations and generate optimized route
 Future<void> fetchDeliveryLocations() async {
@@ -58,14 +71,21 @@ Future<void> fetchDeliveryLocations() async {
         ),
       );
 
-      // ✅ Add numbered markers for delivery points
+      // ✅ Add numbered markers for delivery points with Waze navigation
       for (int i = 0; i < deliveryPoints.length; i++) {
         markers.add(
           Marker(
             markerId: MarkerId((i + 1).toString()), // Numbered marker
             position: deliveryPoints[i],
             icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-            infoWindow: InfoWindow(title: "Stop ${i + 1}"),
+            infoWindow: InfoWindow(
+              title: "Stop ${i + 1}",
+              snippet: "Tap to navigate via Waze",
+            ),
+            onTap: () {
+              print("🚀 Launching Waze navigation for Stop ${i + 1}");
+              launchWazeNavigation(deliveryPoints[i]); // ✅ Open Waze for navigation
+            },
           ),
         );
       }
@@ -75,6 +95,8 @@ Future<void> fetchDeliveryLocations() async {
     getRouteFromGoogleMaps();
   }
 }
+
+
 
 
   // ✅ Get actual route using Google Routes API
