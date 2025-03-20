@@ -15,6 +15,7 @@ dependencies:
   flutter_polyline_points: ^2.1.0
   google_maps_flutter: ^2.10.1
   url_launcher: ^6.3.1
+  reorderables: ^0.6.0
 
 
 dev_dependencies:

@@ -7,6 +7,7 @@ import 'location_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:reorderables/reorderables.dart';
 
 class MapScreen extends StatefulWidget {
   @override
@@ -202,12 +203,38 @@ class _MapScreenState extends State<MapScreen> {
         }
       });
 
-      // ✅ Start tracking dispatcher location to automate navigation
+      // ✅ Start tracking dispatcher location for automation
       startTrackingDispatcher();
 
       // ✅ Start navigation to first stop
       launchWazeNavigation(deliveryPoints.first);
     }
+  }
+
+  void updateRouteAfterChanges() {
+    setState(() {
+      polylines.clear(); // ✅ Clear old route
+      polylines.add(
+        Polyline(
+          polylineId: PolylineId("updated_route"),
+          points: [
+            LatLng(currentPosition!.latitude, currentPosition!.longitude),
+            ...deliveryPoints
+          ],
+          color: Colors.blue,
+          width: 5,
+        ),
+      );
+    });
+
+    print("✅ Route updated with new stop order!");
+  }
+
+  void _deleteStop(int index) {
+    setState(() {
+      deliveryPoints.removeAt(index);
+    });
+    print("🗑️ Stop removed. Remaining stops: $deliveryPoints");
   }
 
   // ✅ Get actual route using Google Routes API
@@ -285,7 +312,9 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
 
+          // ✅ Map Section
           Expanded(
+            flex: 4,
             child: GoogleMap(
               initialCameraPosition: CameraPosition(
                 target: LatLng(currentPosition?.latitude ?? 3.1390,
@@ -302,54 +331,141 @@ class _MapScreenState extends State<MapScreen> {
               },
             ),
           ),
-          // ✅ "Start Delivery" Button
-          Padding(
-            padding: EdgeInsets.all(16.0),
-            child: ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  hasStartedDelivery = true; // ✅ Allow auto-navigation
-                });
-                fetchDeliveryLocations(); // ✅ Start navigation
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                textStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+
+          // ✅ Delivery Stops List Section (Moved Up)
+          Expanded(
+            flex: 3,
+            child: Container(
+              padding: EdgeInsets.all(12.0),
+              color: Colors.white,
+              child: ReorderableColumn(
+                onReorder: (int oldIndex, int newIndex) {
+                  setState(() {
+                    if (newIndex > oldIndex) {
+                      newIndex -= 1;
+                    }
+                    final LatLng item = deliveryPoints.removeAt(oldIndex);
+                    deliveryPoints.insert(newIndex, item);
+                  });
+                  print("🔄 Stops reordered: $deliveryPoints");
+                },
+                children: List.generate(deliveryPoints.length, (index) {
+                  return Card(
+                    key: ValueKey(deliveryPoints[index]),
+                    margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: 3,
+                    child: ListTile(
+                      title: Text(
+                        "Stop ${index + 1}",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        "📍 ${deliveryPoints[index].latitude}, ${deliveryPoints[index].longitude}",
+                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
+                      ),
+                      trailing: IconButton(
+                        icon: Icon(Icons.delete, color: Colors.red),
+                        onPressed: () {
+                          _deleteStop(index);
+                        },
+                      ),
+                    ),
+                  );
+                }),
               ),
-              child: Text("🚀 Start Delivery"),
             ),
           ),
-          // ✅ "Pause Delivery" Button
-          Padding(
-            padding: EdgeInsets.all(8.0),
-            child: ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  isPaused = true; // ✅ Pause delivery
-                });
-                print("⏸️ Delivery paused!");
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-              child: Text("⏸️ Pause Delivery"),
-            ),
-          ),
-          // ✅ "Resume Delivery" Button
-          Padding(
-            padding: EdgeInsets.all(8.0),
-            child: ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  isPaused = false; // ✅ Resume delivery
-                });
-                print("▶️ Delivery resumed!");
-                if (deliveryPoints.isNotEmpty) {
-                  launchWazeNavigation(
-                      deliveryPoints.first); // ✅ Resume navigation
-                }
-              },
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-              child: Text("▶️ Resume Delivery"),
+
+          // ✅ Control Buttons Section (Now at the Bottom)
+          Container(
+            padding: EdgeInsets.all(16.0),
+            color: Colors.grey[200],
+            child: Column(
+              children: [
+                // ✅ Start, Pause, Resume in a Single Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          hasStartedDelivery = true; // ✅ Start Delivery
+                        });
+                        fetchDeliveryLocations(); // ✅ Start navigation
+                      },
+                      icon: Icon(Icons.play_arrow),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding:
+                            EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        textStyle: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      label: Text("🚀 Start"),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          isPaused = true; // ✅ Pause Delivery
+                        });
+                        print("⏸️ Delivery paused!");
+                      },
+                      icon: Icon(Icons.pause),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        padding:
+                            EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        textStyle: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      label: Text("⏸ Pause"),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          isPaused = false; // ✅ Resume Delivery
+                        });
+                        print("▶️ Delivery resumed!");
+                        if (deliveryPoints.isNotEmpty) {
+                          launchWazeNavigation(
+                              deliveryPoints.first); // ✅ Resume navigation
+                        }
+                      },
+                      icon: Icon(Icons.play_circle_fill),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding:
+                            EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        textStyle: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      label: Text("▶ Resume"),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: 10),
+
+                // ✅ Update Route Button
+                ElevatedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      updateRouteAfterChanges(); // ✅ Update the route
+                    });
+                  },
+                  icon: Icon(Icons.refresh),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
+                    textStyle:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  label: Text("🔄 Update Route"),
+                ),
+              ],
             ),
           ),
         ],
