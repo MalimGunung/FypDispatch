@@ -379,22 +379,23 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
 
-          // ✅ Control Buttons Section (Now at the Bottom)
+// ✅ Control Buttons Section (Now at the Bottom)
           Container(
             padding: EdgeInsets.all(16.0),
             color: Colors.grey[200],
             child: Column(
               children: [
-                // ✅ Start, Pause, Resume in a Single Row
+                // ✅ Start and Continue in a Row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
                     ElevatedButton.icon(
                       onPressed: () {
                         setState(() {
-                          hasStartedDelivery = true; // ✅ Start Delivery
+                          hasStartedDelivery = true;
+                          isPaused = false;
                         });
-                        fetchDeliveryLocations(); // ✅ Start navigation
+                        fetchDeliveryLocations();
                       },
                       icon: Icon(Icons.play_arrow),
                       style: ElevatedButton.styleFrom(
@@ -408,12 +409,12 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                     ElevatedButton.icon(
                       onPressed: () {
-                        setState(() {
-                          isPaused = true; // ✅ Pause Delivery
-                        });
-                        print("⏸️ Delivery paused!");
+                        print("✅ Continuing to next stop...");
+                        if (deliveryPoints.isNotEmpty) {
+                          launchWazeNavigation(deliveryPoints.first);
+                        }
                       },
-                      icon: Icon(Icons.pause),
+                      icon: Icon(Icons.play_circle_outline),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
                         padding:
@@ -421,28 +422,7 @@ class _MapScreenState extends State<MapScreen> {
                         textStyle: TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold),
                       ),
-                      label: Text("⏸ Pause"),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          isPaused = false; // ✅ Resume Delivery
-                        });
-                        print("▶️ Delivery resumed!");
-                        if (deliveryPoints.isNotEmpty) {
-                          launchWazeNavigation(
-                              deliveryPoints.first); // ✅ Resume navigation
-                        }
-                      },
-                      icon: Icon(Icons.play_circle_fill),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        padding:
-                            EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        textStyle: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      label: Text("▶ Resume"),
+                      label: Text("➡️ Continue"),
                     ),
                   ],
                 ),
@@ -453,7 +433,7 @@ class _MapScreenState extends State<MapScreen> {
                 ElevatedButton.icon(
                   onPressed: () {
                     setState(() {
-                      updateRouteAfterChanges(); // ✅ Update the route
+                      updateRouteAfterChanges();
                     });
                   },
                   icon: Icon(Icons.refresh),
