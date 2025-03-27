@@ -235,28 +235,45 @@ class _ParcelScanningState extends State<ParcelScanning> {
                         },
                       ),
           ),
-          SizedBox(height: 10),
-          ElevatedButton(
-            onPressed: scanParcel,
-            child: Text("📸 Scan Next Parcel"),
-          ),
-          SizedBox(height: 10),
-          ElevatedButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => OptimizedDeliveryScreen()),
-            ),
-            child: Text("🗺 Generate Optimized Delivery List"),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => MapScreen()),
-            ),
-            child: Text("📍 View Optimized Route on Map"),
-          ),
         ],
+      ),
+
+      // ✅ Bottom Navigation Bar with 3 buttons
+      bottomNavigationBar: BottomAppBar(
+        color: Colors.blueGrey[50],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              // 🗺 Optimized Delivery
+              IconButton(
+                tooltip: "Generate Optimized Delivery",
+                icon: Icon(Icons.list_alt, color: Colors.green),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => OptimizedDeliveryScreen()),
+                ),
+              ),
+                            // 📸 Scan
+              IconButton(
+                tooltip: "Scan Parcel",
+                icon: Icon(Icons.camera_alt, color: Colors.deepPurple),
+                onPressed: scanParcel,
+              ),
+              // 📍 View on Map
+              IconButton(
+                tooltip: "View Map",
+                icon: Icon(Icons.map, color: Colors.blue),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => MapScreen()),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

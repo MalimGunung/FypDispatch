@@ -21,6 +21,7 @@ class _MapScreenState extends State<MapScreen> {
   bool hasStartedDelivery =
       false; // ✅ Prevents auto-navigation before pressing the button
   bool isPaused = false; // ✅ Tracks whether delivery is paused
+  List<bool> deliveryStatus = []; // ⬅️ true = completed, false = pending
 
   List<LatLng> deliveryPoints = [];
   Set<Marker> markers = {};
@@ -115,7 +116,11 @@ class _MapScreenState extends State<MapScreen> {
     if (distance < 50) {
       // ✅ If within 50 meters, mark as arrived
       print("✅ Arrived at stop!");
-      deliveryPoints.removeAt(0); // ✅ Remove completed stop
+      setState(() {
+        deliveryStatus[0] = true; // ✅ Mark as completed
+        deliveryPoints.removeAt(0);
+        deliveryStatus.removeAt(0); // ✅ Keep statuses aligned
+      });
 
       if (deliveryPoints.isNotEmpty) {
         if (!isPaused) {
@@ -133,9 +138,10 @@ class _MapScreenState extends State<MapScreen> {
     Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 10, // ✅ Update every 10 meters
+        distanceFilter: 10,
       ),
     ).listen((Position position) {
+      animateToCurrentLocation(position); // 👈 Always zoom to current location
       checkIfDispatcherArrived(position);
     });
   }
@@ -174,6 +180,7 @@ class _MapScreenState extends State<MapScreen> {
         deliveryPoints = optimizedRoute
             .map((address) => LatLng(address["latitude"], address["longitude"]))
             .toList();
+        deliveryStatus = List.generate(deliveryPoints.length, (_) => false);
 
         markers.clear(); // Clear existing markers
 
@@ -235,6 +242,17 @@ class _MapScreenState extends State<MapScreen> {
       deliveryPoints.removeAt(index);
     });
     print("🗑️ Stop removed. Remaining stops: $deliveryPoints");
+  }
+
+  // ✅ Method to animate camera to current location
+  void animateToCurrentLocation(Position position) {
+    if (mapController != null) {
+      mapController!.animateCamera(
+        CameraUpdate.newLatLng(
+          LatLng(position.latitude, position.longitude),
+        ),
+      );
+    }
   }
 
   // ✅ Get actual route using Google Routes API
@@ -303,7 +321,6 @@ class _MapScreenState extends State<MapScreen> {
       appBar: AppBar(title: Text("Optimized Delivery Route")),
       body: Column(
         children: [
-          // ✅ Show ETA at the top
           Padding(
             padding: EdgeInsets.all(16.0),
             child: Text(
@@ -311,14 +328,12 @@ class _MapScreenState extends State<MapScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
           ),
-
-          // ✅ Map Section
           Expanded(
             flex: 4,
             child: GoogleMap(
               initialCameraPosition: CameraPosition(
                 target: LatLng(currentPosition?.latitude ?? 3.1390,
-                    currentPosition?.longitude ?? 101.6869), // Default to KL
+                    currentPosition?.longitude ?? 101.6869),
                 zoom: 12,
               ),
               markers: markers,
@@ -331,8 +346,6 @@ class _MapScreenState extends State<MapScreen> {
               },
             ),
           ),
-
-          // ✅ Delivery Stops List Section (Moved Up)
           Expanded(
             flex: 3,
             child: Container(
@@ -345,9 +358,10 @@ class _MapScreenState extends State<MapScreen> {
                       newIndex -= 1;
                     }
                     final LatLng item = deliveryPoints.removeAt(oldIndex);
+                    final bool status = deliveryStatus.removeAt(oldIndex);
                     deliveryPoints.insert(newIndex, item);
+                    deliveryStatus.insert(newIndex, status);
                   });
-                  print("🔄 Stops reordered: $deliveryPoints");
                 },
                 children: List.generate(deliveryPoints.length, (index) {
                   return Card(
@@ -358,12 +372,20 @@ class _MapScreenState extends State<MapScreen> {
                     ),
                     elevation: 3,
                     child: ListTile(
+                      leading: deliveryStatus[index]
+                          ? Icon(Icons.check_circle, color: Colors.green)
+                          : Icon(Icons.pending_actions, color: Colors.orange),
                       title: Text(
                         "Stop ${index + 1}",
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: deliveryStatus[index]
+                              ? Colors.green
+                              : Colors.black,
+                        ),
                       ),
                       subtitle: Text(
-                        "📍 ${deliveryPoints[index].latitude}, ${deliveryPoints[index].longitude}",
+                        "📍 ${deliveryPoints[index].latitude}, ${deliveryPoints[index].longitude}\nStatus: ${deliveryStatus[index] ? 'Completed' : 'Pending'}",
                         style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                       ),
                       trailing: IconButton(
@@ -378,75 +400,47 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ),
           ),
-
-// ✅ Control Buttons Section (Now at the Bottom)
-          Container(
-            padding: EdgeInsets.all(16.0),
-            color: Colors.grey[200],
-            child: Column(
-              children: [
-                // ✅ Start and Continue in a Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        setState(() {
-                          hasStartedDelivery = true;
-                          isPaused = false;
-                        });
-                        fetchDeliveryLocations();
-                      },
-                      icon: Icon(Icons.play_arrow),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        padding:
-                            EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        textStyle: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      label: Text("🚀 Start"),
-                    ),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        print("✅ Continuing to next stop...");
-                        if (deliveryPoints.isNotEmpty) {
-                          launchWazeNavigation(deliveryPoints.first);
-                        }
-                      },
-                      icon: Icon(Icons.play_circle_outline),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        padding:
-                            EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        textStyle: TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.bold),
-                      ),
-                      label: Text("➡️ Continue"),
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: 10),
-
-                // ✅ Update Route Button
-                ElevatedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      updateRouteAfterChanges();
-                    });
-                  },
-                  icon: Icon(Icons.refresh),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: EdgeInsets.symmetric(vertical: 12, horizontal: 20),
-                    textStyle:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  label: Text("🔄 Update Route"),
-                ),
-              ],
-            ),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.white,
+        selectedItemColor: Colors.green[700],
+        unselectedItemColor: Colors.grey[600],
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+        onTap: (int index) {
+          switch (index) {
+            case 0:
+              setState(() {
+                hasStartedDelivery = true;
+                isPaused = false;
+              });
+              fetchDeliveryLocations();
+              break;
+            case 1:
+              if (deliveryPoints.isNotEmpty) {
+                launchWazeNavigation(deliveryPoints.first);
+              }
+              break;
+            case 2:
+              setState(() {
+                updateRouteAfterChanges();
+              });
+              break;
+          }
+        },
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.play_arrow),
+            label: "Start",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.play_circle_fill),
+            label: "Continue",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.refresh),
+            label: "Update Route",
           ),
         ],
       ),
