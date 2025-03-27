@@ -24,6 +24,7 @@ class _MapScreenState extends State<MapScreen> {
   List<bool> deliveryStatus = []; // ⬅️ true = completed, false = pending
 
   List<LatLng> deliveryPoints = [];
+  List<String> deliveryAddresses = []; // ⬅️ Store address names for display
   Set<Marker> markers = {};
   Set<Polyline> polylines = {};
   Position? currentPosition;
@@ -180,11 +181,13 @@ class _MapScreenState extends State<MapScreen> {
         deliveryPoints = optimizedRoute
             .map((address) => LatLng(address["latitude"], address["longitude"]))
             .toList();
+        deliveryAddresses = optimizedRoute
+            .map((address) => address["address"] as String)
+            .toList();
         deliveryStatus = List.generate(deliveryPoints.length, (_) => false);
 
-        markers.clear(); // Clear existing markers
+        markers.clear();
 
-        // ✅ Add dispatcher location as Marker 0
         markers.add(
           Marker(
             markerId: MarkerId("0"),
@@ -196,11 +199,10 @@ class _MapScreenState extends State<MapScreen> {
           ),
         );
 
-        // ✅ Add numbered markers for delivery points
         for (int i = 0; i < deliveryPoints.length; i++) {
           markers.add(
             Marker(
-              markerId: MarkerId((i + 1).toString()), // Numbered marker
+              markerId: MarkerId((i + 1).toString()),
               position: deliveryPoints[i],
               icon: BitmapDescriptor.defaultMarkerWithHue(
                   BitmapDescriptor.hueRed),
@@ -209,6 +211,8 @@ class _MapScreenState extends State<MapScreen> {
           );
         }
       });
+
+      getRouteFromGoogleMaps(); // ✅ Call this to draw the polyline
 
       // ✅ Start tracking dispatcher location for automation
       startTrackingDispatcher();
@@ -358,8 +362,11 @@ class _MapScreenState extends State<MapScreen> {
                       newIndex -= 1;
                     }
                     final LatLng item = deliveryPoints.removeAt(oldIndex);
+                    final String address = deliveryAddresses.removeAt(oldIndex);
                     final bool status = deliveryStatus.removeAt(oldIndex);
+
                     deliveryPoints.insert(newIndex, item);
+                    deliveryAddresses.insert(newIndex, address);
                     deliveryStatus.insert(newIndex, status);
                   });
                 },
@@ -385,7 +392,7 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                       ),
                       subtitle: Text(
-                        "📍 ${deliveryPoints[index].latitude}, ${deliveryPoints[index].longitude}\nStatus: ${deliveryStatus[index] ? 'Completed' : 'Pending'}",
+                        "📍 ${deliveryAddresses[index]}\nStatus: ${deliveryStatus[index] ? 'Completed' : 'Pending'}",
                         style: TextStyle(fontSize: 14, color: Colors.grey[700]),
                       ),
                       trailing: IconButton(
