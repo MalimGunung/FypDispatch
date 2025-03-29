@@ -22,6 +22,7 @@ class _MapScreenState extends State<MapScreen> {
       false; // ✅ Prevents auto-navigation before pressing the button
   bool isPaused = false; // ✅ Tracks whether delivery is paused
   List<bool> deliveryStatus = []; // ⬅️ true = completed, false = pending
+  bool hasAnimatedToLocation = false;
 
   List<LatLng> deliveryPoints = [];
   List<String> deliveryAddresses = []; // ⬅️ Store address names for display
@@ -142,7 +143,12 @@ class _MapScreenState extends State<MapScreen> {
         distanceFilter: 10,
       ),
     ).listen((Position position) {
-      animateToCurrentLocation(position); // 👈 Always zoom to current location
+      // ✅ Zoom only once at the start to avoid map flickering
+      if (!hasAnimatedToLocation) {
+        animateToCurrentLocation(position);
+        hasAnimatedToLocation = true;
+      }
+
       checkIfDispatcherArrived(position);
     });
   }
@@ -252,8 +258,12 @@ class _MapScreenState extends State<MapScreen> {
   void animateToCurrentLocation(Position position) {
     if (mapController != null) {
       mapController!.animateCamera(
-        CameraUpdate.newLatLng(
-          LatLng(position.latitude, position.longitude),
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(position.latitude, position.longitude),
+            zoom: 16.5, // 🔍 Adjust zoom level as needed
+            tilt: 30, // Optional tilt for better 3D view
+          ),
         ),
       );
     }
