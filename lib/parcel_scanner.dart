@@ -16,6 +16,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
   final FirebaseService firebaseService = FirebaseService();
   List<Map<String, dynamic>> addressList = [];
   bool isLoading = false;
+  Set<String> selectedItems = {};
+  bool selectionMode = false;
 
   @override
   void initState() {
@@ -160,7 +162,63 @@ class _ParcelScanningState extends State<ParcelScanning> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Parcel Scanning")),
+      appBar: AppBar(
+        title: Text("Scan & Manage Parcels"),
+        actions: selectionMode
+            ? [
+                // ✅ Select All / Deselect All Toggle
+                IconButton(
+                  tooltip: selectedItems.length < addressList.length
+                      ? "Select All"
+                      : "Deselect All",
+                  icon: Icon(
+                    selectedItems.length < addressList.length
+                        ? Icons.select_all
+                        : Icons.deselect,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      if (selectedItems.length < addressList.length) {
+                        selectedItems = addressList
+                            .map((item) => item["id"].toString())
+                            .toSet();
+                      } else {
+                        selectedItems.clear();
+                      }
+                    });
+                  },
+                ),
+
+                // ✅ Delete Selected
+                IconButton(
+                  icon: Icon(Icons.delete),
+                  tooltip: "Delete Selected",
+                  onPressed: () async {
+                    for (var id in selectedItems) {
+                      await firebaseService.deleteParcel(id);
+                    }
+                    setState(() {
+                      selectedItems.clear();
+                      selectionMode = false;
+                    });
+                    fetchStoredAddresses();
+                  },
+                ),
+
+                // ✅ Cancel Selection
+                IconButton(
+                  icon: Icon(Icons.cancel),
+                  tooltip: "Cancel Selection",
+                  onPressed: () {
+                    setState(() {
+                      selectionMode = false;
+                      selectedItems.clear();
+                    });
+                  },
+                ),
+              ]
+            : [],
+      ),
       body: Column(
         children: [
           Expanded(
@@ -171,64 +229,96 @@ class _ParcelScanningState extends State<ParcelScanning> {
                     : ListView.builder(
                         itemCount: addressList.length,
                         itemBuilder: (context, index) {
-                          return Card(
-                            elevation: 4,
-                            margin: EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: ListTile(
-                              leading: Icon(Icons.location_on,
-                                  color: Colors.red, size: 30),
-                              title: Text(
-                                addressList[index]["address"],
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                          final id = addressList[index]["id"].toString();
+                          final selected = selectedItems.contains(id);
+
+                          return GestureDetector(
+                            onLongPress: () {
+                              setState(() {
+                                selectionMode = true;
+                                selectedItems.add(id);
+                              });
+                            },
+                            child: Card(
+                              elevation: 4,
+                              margin: EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
                               ),
-                              subtitle: Text(
-                                "📍 Lat: ${addressList[index]["latitude"]}, Lon: ${addressList[index]["longitude"]}",
-                                style: TextStyle(
-                                    fontSize: 14, color: Colors.grey[700]),
-                              ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: Icon(Icons.edit, color: Colors.blue),
-                                    onPressed: () => editAddress(
-                                      addressList[index]["id"],
-                                      addressList[index]["address"],
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: Icon(Icons.delete, color: Colors.red),
-                                    onPressed: () {
-                                      showDialog(
-                                        context: context,
-                                        builder: (context) => AlertDialog(
-                                          title: Text("Confirm Delete"),
-                                          content: Text(
-                                              "Are you sure you want to delete this address?"),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () {
-                                                deleteAddress(
-                                                    addressList[index]["id"]);
-                                                Navigator.pop(context);
-                                              },
-                                              child: Text("Delete"),
+                              color: selected
+                                  ? Colors.blue.withOpacity(0.2)
+                                  : Colors.white,
+                              child: ListTile(
+                                leading: Icon(Icons.location_on,
+                                    color: Colors.red, size: 30),
+                                title: Text(
+                                  addressList[index]["address"],
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                subtitle: Text(
+                                  "📍 Lat: ${addressList[index]["latitude"]}, Lon: ${addressList[index]["longitude"]}",
+                                  style: TextStyle(
+                                      fontSize: 14, color: Colors.grey[700]),
+                                ),
+                                trailing: selectionMode
+                                    ? Checkbox(
+                                        value: selected,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            if (value!) {
+                                              selectedItems.add(id);
+                                            } else {
+                                              selectedItems.remove(id);
+                                            }
+                                          });
+                                        },
+                                      )
+                                    : Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: Icon(Icons.edit,
+                                                color: Colors.blue),
+                                            onPressed: () => editAddress(
+                                              addressList[index]["id"],
+                                              addressList[index]["address"],
                                             ),
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.pop(context),
-                                              child: Text("Cancel"),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ],
+                                          ),
+                                          IconButton(
+                                            icon: Icon(Icons.delete,
+                                                color: Colors.red),
+                                            onPressed: () {
+                                              showDialog(
+                                                context: context,
+                                                builder: (context) =>
+                                                    AlertDialog(
+                                                  title: Text("Confirm Delete"),
+                                                  content: Text(
+                                                      "Are you sure you want to delete this address?"),
+                                                  actions: [
+                                                    TextButton(
+                                                      onPressed: () {
+                                                        deleteAddress(
+                                                            addressList[index]
+                                                                ["id"]);
+                                                        Navigator.pop(context);
+                                                      },
+                                                      child: Text("Delete"),
+                                                    ),
+                                                    TextButton(
+                                                      onPressed: () =>
+                                                          Navigator.pop(
+                                                              context),
+                                                      child: Text("Cancel"),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ),
                               ),
                             ),
                           );
@@ -237,8 +327,6 @@ class _ParcelScanningState extends State<ParcelScanning> {
           ),
         ],
       ),
-
-      // ✅ Bottom Navigation Bar with 3 buttons
       bottomNavigationBar: BottomAppBar(
         color: Colors.blueGrey[50],
         child: Padding(
@@ -246,7 +334,6 @@ class _ParcelScanningState extends State<ParcelScanning> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              // 🗺 Optimized Delivery
               IconButton(
                 tooltip: "Generate Optimized Delivery",
                 icon: Icon(Icons.list_alt, color: Colors.green),
@@ -256,13 +343,11 @@ class _ParcelScanningState extends State<ParcelScanning> {
                       builder: (context) => OptimizedDeliveryScreen()),
                 ),
               ),
-                            // 📸 Scan
               IconButton(
                 tooltip: "Scan Parcel",
                 icon: Icon(Icons.camera_alt, color: Colors.deepPurple),
                 onPressed: scanParcel,
               ),
-              // 📍 View on Map
               IconButton(
                 tooltip: "View Map",
                 icon: Icon(Icons.map, color: Colors.blue),
