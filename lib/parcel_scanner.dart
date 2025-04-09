@@ -163,6 +163,14 @@ class _ParcelScanningState extends State<ParcelScanning> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(Icons.home),
+          tooltip: "Go to Home",
+          onPressed: () {
+            Navigator.pop(
+                context); // Adjust if your home uses different navigation logic
+          },
+        ),
         title: Text("Scan & Manage Parcels"),
         actions: selectionMode
             ? [
