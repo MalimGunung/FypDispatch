@@ -164,17 +164,25 @@ class _ParcelScanningState extends State<ParcelScanning> {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.home),
+          icon: Icon(Icons.home, color: Colors.black87),
           tooltip: "Go to Home",
           onPressed: () {
-            Navigator.pop(
-                context); // Adjust if your home uses different navigation logic
+            Navigator.pop(context);
           },
         ),
-        title: Text("Scan & Manage Parcels"),
+        title: Text(
+          "Scan & Manage Parcels",
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: IconThemeData(color: Colors.black87),
         actions: selectionMode
             ? [
-                // ✅ Select All / Deselect All Toggle
                 IconButton(
                   tooltip: selectedItems.length < addressList.length
                       ? "Select All"
@@ -183,6 +191,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
                     selectedItems.length < addressList.length
                         ? Icons.select_all
                         : Icons.deselect,
+                    color: Colors.black87,
                   ),
                   onPressed: () {
                     setState(() {
@@ -196,10 +205,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
                     });
                   },
                 ),
-
-                // ✅ Delete Selected
                 IconButton(
-                  icon: Icon(Icons.delete),
+                  icon: Icon(Icons.delete, color: Colors.black87),
                   tooltip: "Delete Selected",
                   onPressed: () async {
                     for (var id in selectedItems) {
@@ -212,10 +219,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
                     fetchStoredAddresses();
                   },
                 ),
-
-                // ✅ Cancel Selection
                 IconButton(
-                  icon: Icon(Icons.cancel),
+                  icon: Icon(Icons.cancel, color: Colors.black87),
                   tooltip: "Cancel Selection",
                   onPressed: () {
                     setState(() {

@@ -25,19 +25,51 @@ class _CameraScreenState extends State<CameraScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Scan Parcel Label")),
+      appBar: AppBar(
+        title: Text(
+          "Scan Parcel Label",
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: IconThemeData(color: Colors.black87),
+      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _capturedImage == null
-                ? Text("No image captured yet")
-                : Image.file(_capturedImage!), // Display captured image
+                ? Text(
+                    "No image captured yet",
+                    style: TextStyle(fontSize: 16),
+                  )
+                : Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Image.file(_capturedImage!),
+                    ),
+                  ),
             SizedBox(height: 20),
             ElevatedButton(
               onPressed: captureImage,
-              child: Text("📸 Capture Image"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue, // Button color
+                foregroundColor: Colors.white, // Text color
+                padding: EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text(
+                "📸 Capture Image",
+                style: TextStyle(fontSize: 18),
+              ),
             ),
+            SizedBox(height: 40),
           ],
         ),
       ),

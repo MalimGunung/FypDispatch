@@ -328,139 +328,257 @@ class _MapScreenState extends State<MapScreen> {
     }
     return polyline;
   }
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    appBar: AppBar(
+      title: Text(
+        "Optimized Delivery Route",
+        style: TextStyle(
+          color: Colors.black87,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      backgroundColor: Colors.white,
+      elevation: 1,
+      iconTheme: IconThemeData(color: Colors.black87),
+    ),
+    body: Column(
+      children: [
+        // ETA Card
+        Card(
+          margin: EdgeInsets.all(16),
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(Icons.timer, color: Colors.blue),
+                SizedBox(width: 12),
+                Text(
+                  "Estimated Time to Next Stop:",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Spacer(),
+                Text(
+                  estimatedTime, // Make sure this is a String
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green[700],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text("Optimized Delivery Route")),
-      body: Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text(
-              "🕒 Estimated Time to Next Stop: $estimatedTime",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            flex: 4,
-            child: GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: LatLng(currentPosition?.latitude ?? 3.1390,
-                    currentPosition?.longitude ?? 101.6869),
-                zoom: 12,
+        // Map Section
+        Expanded(
+          flex: 4,
+          child: GoogleMap(
+            initialCameraPosition: CameraPosition(
+              target: LatLng(
+                currentPosition?.latitude ?? 3.1390,
+                currentPosition?.longitude ?? 101.6869,
               ),
-              markers: markers,
-              polylines: polylines,
-              myLocationEnabled: true,
-              onMapCreated: (controller) {
-                setState(() {
-                  mapController = controller;
-                });
-              },
+              zoom: 12,
             ),
+            markers: markers,
+            polylines: polylines,
+            myLocationEnabled: true,
+            onMapCreated: (controller) {
+              setState(() {
+                mapController = controller;
+              });
+            },
           ),
-          Expanded(
-            flex: 3,
-            child: Container(
-              padding: EdgeInsets.all(12.0),
+        ),
+
+        // Delivery List Section
+        Expanded(
+          flex: 3,
+          child: Container(
+            decoration: BoxDecoration(
               color: Colors.white,
-              child: ReorderableColumn(
-                onReorder: (int oldIndex, int newIndex) {
-                  setState(() {
-                    if (newIndex > oldIndex) {
-                      newIndex -= 1;
-                    }
-                    final LatLng item = deliveryPoints.removeAt(oldIndex);
-                    final String address = deliveryAddresses.removeAt(oldIndex);
-                    final bool status = deliveryStatus.removeAt(oldIndex);
-
-                    deliveryPoints.insert(newIndex, item);
-                    deliveryAddresses.insert(newIndex, address);
-                    deliveryStatus.insert(newIndex, status);
-                  });
-                },
-                children: List.generate(deliveryPoints.length, (index) {
-                  return Card(
-                    key: ValueKey(deliveryPoints[index]),
-                    margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    elevation: 3,
-                    child: ListTile(
-                      leading: deliveryStatus[index]
-                          ? Icon(Icons.check_circle, color: Colors.green)
-                          : Icon(Icons.pending_actions, color: Colors.orange),
-                      title: Text(
-                        "Stop ${index + 1}",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: deliveryStatus[index]
-                              ? Colors.green
-                              : Colors.black,
-                        ),
-                      ),
-                      subtitle: Text(
-                        "📍 ${deliveryAddresses[index]}\nStatus: ${deliveryStatus[index] ? 'Completed' : 'Pending'}",
-                        style: TextStyle(fontSize: 14, color: Colors.grey[700]),
-                      ),
-                      trailing: IconButton(
-                        icon: Icon(Icons.delete, color: Colors.red),
-                        onPressed: () {
-                          _deleteStop(index);
-                        },
-                      ),
-                    ),
-                  );
-                }),
-              ),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 8,
+                  offset: Offset(0, -4),
+                ),
+              ],
             ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text(
+                    "Delivery Stops",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: ReorderableColumn(
+                    onReorder: (int oldIndex, int newIndex) {
+                      setState(() {
+                        if (newIndex > oldIndex) newIndex -= 1;
+                        final item = deliveryPoints.removeAt(oldIndex);
+                        final address = deliveryAddresses.removeAt(oldIndex);
+                        final status = deliveryStatus.removeAt(oldIndex);
+
+                        deliveryPoints.insert(newIndex, item);
+                        deliveryAddresses.insert(newIndex, address);
+                        deliveryStatus.insert(newIndex, status);
+                      });
+                    },
+                    children: List.generate(deliveryPoints.length, (index) {
+                      return Card(
+                        key: ValueKey(deliveryPoints[index]),
+                        margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 2,
+                        child: ListTile(
+                          leading: Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: deliveryStatus[index]
+                                  ? Colors.green[100]
+                                  : Colors.orange[100],
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              deliveryStatus[index]
+                                  ? Icons.check
+                                  : Icons.directions_car,
+                              color: deliveryStatus[index]
+                                  ? Colors.green
+                                  : Colors.orange,
+                            ),
+                          ),
+                          title: Text(
+                            "Stop ${index + 1}",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: deliveryStatus[index]
+                                  ? Colors.green[800]
+                                  : Colors.black87,
+                            ),
+                          ),
+                          subtitle: Text(
+                            deliveryAddresses[index],
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                          trailing: IconButton(
+                            icon: Icon(Icons.delete, color: Colors.red[400]),
+                            onPressed: () => _deleteStop(index),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+
+    // Bottom Navigation Bar
+    bottomNavigationBar: Container(
+      height: 80,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 10,
+            offset: Offset(0, -4),
           ),
         ],
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.white,
-        selectedItemColor: Colors.green[700],
-        unselectedItemColor: Colors.grey[600],
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        onTap: (int index) {
-          switch (index) {
-            case 0:
-              setState(() {
-                hasStartedDelivery = true;
-                isPaused = false;
-              });
-              fetchDeliveryLocations();
-              break;
-            case 1:
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          ElevatedButton.icon(
+            onPressed: hasStartedDelivery
+                ? null
+                : () {
+                    setState(() {
+                      hasStartedDelivery = true;
+                      isPaused = false;
+                    });
+                    fetchDeliveryLocations();
+                  },
+            icon: Icon(Icons.play_arrow, size: 24),
+            label: Text("START"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green[700],
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
               if (deliveryPoints.isNotEmpty) {
                 launchWazeNavigation(deliveryPoints.first);
               }
-              break;
-            case 2:
+            },
+            icon: Icon(Icons.navigation, size: 24),
+            label: Text("NAVIGATE"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue[700],
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
               setState(() {
                 updateRouteAfterChanges();
               });
-              break;
-          }
-        },
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.play_arrow),
-            label: "Start",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.play_circle_fill),
-            label: "Continue",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.refresh),
-            label: "Update Route",
+            },
+            icon: Icon(Icons.refresh, size: 24),
+            label: Text("UPDATE"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange[700],
+              foregroundColor: Colors.white,
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
+
 }

@@ -4,8 +4,7 @@ import 'map_screen.dart';
 
 class OptimizedDeliveryScreen extends StatefulWidget {
   @override
-  _OptimizedDeliveryScreenState createState() =>
-      _OptimizedDeliveryScreenState();
+  _OptimizedDeliveryScreenState createState() => _OptimizedDeliveryScreenState();
 }
 
 class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
@@ -21,7 +20,7 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
 
   Future<void> fetchDeliveryList() async {
     try {
-      List<Map<String, dynamic>> route =
+      List<Map<String, dynamic>> route = 
           await optimizer.getOptimizedDeliverySequence();
       setState(() {
         deliveryList = route;
@@ -36,10 +35,21 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
   }
 
   @override
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("Optimized Delivery List")),
+      appBar: AppBar(
+        title: Text(
+          "Optimized Delivery Route",
+          style: TextStyle(
+            color: Colors.black87,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: IconThemeData(color: Colors.black87),
+      ),
       body: Column(
         children: [
           Expanded(
@@ -60,20 +70,27 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                           return Card(
                             margin: EdgeInsets.symmetric(
                                 horizontal: 15, vertical: 10),
-                            elevation: 5,
+                            elevation: 2,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: ListTile(
                               contentPadding: EdgeInsets.symmetric(
                                   horizontal: 16, vertical: 12),
-                              leading: CircleAvatar(
-                                backgroundColor: Colors.blueAccent,
-                                child: Text(
-                                  '${index + 1}',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
+                              leading: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: Colors.blueAccent,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${index + 1}',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -89,31 +106,58 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                                 style: TextStyle(
                                     fontSize: 14, color: Colors.grey[700]),
                               ),
+                              trailing: Icon(
+                                Icons.chevron_right,
+                                color: Colors.grey,
+                              ),
                             ),
                           );
                         },
                       ),
           ),
           Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
+            padding: const EdgeInsets.all(20.0),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.green.withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ElevatedButton(
                 onPressed: () {
-                  // ✅ Navigate to MapScreen directly
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => MapScreen()),
                   );
                 },
-                icon: Icon(Icons.map),
-                label: Text("View on Map"),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  padding: EdgeInsets.symmetric(vertical: 14),
-                  textStyle:
-                      TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  backgroundColor: Colors.green[600],
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(double.infinity, 56),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.map, size: 24),
+                    SizedBox(width: 12),
+                    Text(
+                      "VIEW ON MAP",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
