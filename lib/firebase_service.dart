@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+
 class FirebaseService {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // ✅ Save scanned parcel data
   Future<void> saveParcelData(String address, double latitude, double longitude) async {
@@ -76,4 +78,13 @@ class FirebaseService {
       print("❌ Error updating parcel: $e");
     }
   }
+
+  // ✅ Add this method to delete all parcels
+  Future<void> deleteAllParcels() async {
+    final snapshot = await _firestore.collection('parcels').get();
+    for (var doc in snapshot.docs) {
+      await _firestore.collection('parcels').doc(doc.id).delete();
+    }
+  }
+
 }
