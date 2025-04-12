@@ -10,7 +10,6 @@ import 'package:http/http.dart' as http;
 import 'package:reorderables/reorderables.dart';
 import 'delivery_complete_screen.dart';
 
-
 class MapScreen extends StatefulWidget {
   @override
   _MapScreenState createState() => _MapScreenState();
@@ -99,58 +98,57 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-Future<void> checkIfDispatcherArrived(Position position) async {
-  if (isPaused || deliveryPoints.isEmpty) return;
+  Future<void> checkIfDispatcherArrived(Position position) async {
+    if (isPaused || deliveryPoints.isEmpty) return;
 
-  LatLng currentLocation = LatLng(position.latitude, position.longitude);
-  LatLng nextStop = deliveryPoints.first;
+    LatLng currentLocation = LatLng(position.latitude, position.longitude);
+    LatLng nextStop = deliveryPoints.first;
 
-  double distance = Geolocator.distanceBetween(
-    currentLocation.latitude,
-    currentLocation.longitude,
-    nextStop.latitude,
-    nextStop.longitude,
-  );
+    double distance = Geolocator.distanceBetween(
+      currentLocation.latitude,
+      currentLocation.longitude,
+      nextStop.latitude,
+      nextStop.longitude,
+    );
 
-  print("📍 Distance to next stop: ${distance.toStringAsFixed(2)} meters");
+    print("📍 Distance to next stop: ${distance.toStringAsFixed(2)} meters");
 
-  // ✅ Fetch ETA and update UI
-  fetchEstimatedTime(currentLocation, nextStop);
+    // ✅ Fetch ETA and update UI
+    fetchEstimatedTime(currentLocation, nextStop);
 
-  if (distance < 50) {
-    print("✅ Arrived at stop!");
-    setState(() {
-      deliveryStatus[0] = true;
-      deliveryPoints.removeAt(0);
-      deliveryAddresses.removeAt(0);
-      deliveryStatus.removeAt(0);
-    });
+    if (distance < 50) {
+      print("✅ Arrived at stop!");
+      setState(() {
+        deliveryStatus[0] = true;
+        deliveryPoints.removeAt(0);
+        deliveryAddresses.removeAt(0);
+        deliveryStatus.removeAt(0);
+      });
 
-    if (deliveryPoints.isNotEmpty) {
-      if (!isPaused) {
-        print("🚀 Navigating to next stop...");
-        launchWazeNavigation(deliveryPoints.first);
-      }
-    } else {
-      // ✅ All deliveries completed
-      print("🎉 All deliveries completed!");
+      if (deliveryPoints.isNotEmpty) {
+        if (!isPaused) {
+          print("🚀 Navigating to next stop...");
+          launchGoogleMapsNavigation(deliveryPoints.first);
+        }
+      } else {
+        // ✅ All deliveries completed
+        print("🎉 All deliveries completed!");
 
-      // ✅ Delete all parcels from Firestore
-      await firebaseService.deleteAllParcels();
+        // ✅ Delete all parcels from Firestore
+        await firebaseService.deleteAllParcels();
 
-      // ✅ Navigate to confirmation screen (animated)
-      if (context.mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DeliveryCompleteScreen(),
-          ),
-        );
+        // ✅ Navigate to confirmation screen (animated)
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DeliveryCompleteScreen(),
+            ),
+          );
+        }
       }
     }
   }
-}
-
 
   void startTrackingDispatcher() {
     Geolocator.getPositionStream(
@@ -169,34 +167,33 @@ Future<void> checkIfDispatcherArrived(Position position) async {
     });
   }
 
-  void launchWazeNavigation(LatLng destination) async {
-    final Uri wazeUrl = Uri.parse(
-        "waze://?ll=${destination.latitude},${destination.longitude}&navigate=yes");
-    final Uri fallbackUrl = Uri.parse(
-        "https://waze.com/ul?ll=${destination.latitude},${destination.longitude}&navigate=yes");
+  void launchGoogleMapsNavigation(LatLng destination) async {
+    final url = Uri.parse(
+        "https://www.google.com/maps/dir/?api=1&destination=${destination.latitude},${destination.longitude}&travelmode=driving&dir_action=navigate");
 
-    if (await canLaunchUrl(wazeUrl)) {
-      await launchUrl(wazeUrl, mode: LaunchMode.externalApplication);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
-      print("⚠️ Waze app not installed, opening in browser.");
-      await launchUrl(fallbackUrl, mode: LaunchMode.externalApplication);
+      print("❌ Could not open Google Maps");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Google Maps could not be launched")),
+      );
     }
   }
 
   //Reset App State
   void resetAppState() {
-  setState(() {
-    deliveryPoints.clear();
-    deliveryAddresses.clear();
-    deliveryStatus.clear();
-    markers.clear();
-    polylines.clear();
-    hasStartedDelivery = false;
-    isPaused = false;
-    estimatedTime = "Calculating...";
-  });
-}
-
+    setState(() {
+      deliveryPoints.clear();
+      deliveryAddresses.clear();
+      deliveryStatus.clear();
+      markers.clear();
+      polylines.clear();
+      hasStartedDelivery = false;
+      isPaused = false;
+      estimatedTime = "Calculating...";
+    });
+  }
 
   // ✅ Fetch delivery locations and generate optimized route
   Future<void> fetchDeliveryLocations() async {
@@ -255,7 +252,7 @@ Future<void> checkIfDispatcherArrived(Position position) async {
       startTrackingDispatcher();
 
       // ✅ Start navigation to first stop
-      launchWazeNavigation(deliveryPoints.first);
+      launchGoogleMapsNavigation(deliveryPoints.first);
     }
   }
 
@@ -577,7 +574,7 @@ Future<void> checkIfDispatcherArrived(Position position) async {
             ElevatedButton.icon(
               onPressed: () {
                 if (deliveryPoints.isNotEmpty) {
-                  launchWazeNavigation(deliveryPoints.first);
+                  launchGoogleMapsNavigation(deliveryPoints.first);
                 }
               },
               icon: Icon(Icons.navigation, size: 24),
