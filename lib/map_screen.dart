@@ -24,6 +24,7 @@ class _MapScreenState extends State<MapScreen> {
   bool isPaused = false; // ✅ Tracks whether delivery is paused
   List<bool> deliveryStatus = []; // ⬅️ true = completed, false = pending
   bool hasAnimatedToLocation = false;
+  bool isInNavigationMode = false;
 
   List<LatLng> deliveryPoints = [];
   List<String> deliveryAddresses = []; // ⬅️ Store address names for display
@@ -38,7 +39,8 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void initState() {
     super.initState();
-    fetchDeliveryLocations();
+    hasStartedDelivery = true; // Immediately set to true
+    fetchDeliveryLocations(); // Auto-fetch without needing button
   }
 
   Future<void> fetchEstimatedTime(LatLng origin, LatLng destination) async {
@@ -118,16 +120,17 @@ class _MapScreenState extends State<MapScreen> {
 
     if (distance < 50) {
       print("✅ Arrived at stop!");
+
       setState(() {
-        deliveryStatus[0] = true;
+        deliveryStatus[0] = true; // Mark as completed
         deliveryPoints.removeAt(0);
         deliveryAddresses.removeAt(0);
         deliveryStatus.removeAt(0);
       });
 
       if (deliveryPoints.isNotEmpty) {
-        if (!isPaused) {
-          print("🚀 Navigating to next stop...");
+        if (!isPaused && isInNavigationMode) {
+          print("🚀 Auto-navigating to next stop...");
           launchGoogleMapsNavigation(deliveryPoints.first);
         }
       } else {
@@ -250,9 +253,6 @@ class _MapScreenState extends State<MapScreen> {
 
       // ✅ Start tracking dispatcher location for automation
       startTrackingDispatcher();
-
-      // ✅ Start navigation to first stop
-      launchGoogleMapsNavigation(deliveryPoints.first);
     }
   }
 
@@ -550,30 +550,13 @@ class _MapScreenState extends State<MapScreen> {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            ElevatedButton.icon(
-              onPressed: hasStartedDelivery
-                  ? null
-                  : () {
-                      setState(() {
-                        hasStartedDelivery = true;
-                        isPaused = false;
-                      });
-                      fetchDeliveryLocations();
-                    },
-              icon: Icon(Icons.play_arrow, size: 24),
-              label: Text("START"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green[700],
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
+            // 🔵 Navigate Button
             ElevatedButton.icon(
               onPressed: () {
                 if (deliveryPoints.isNotEmpty) {
+                  setState(() {
+                    isInNavigationMode = true; // ✅ Trigger auto-navigate
+                  });
                   launchGoogleMapsNavigation(deliveryPoints.first);
                 }
               },
@@ -588,6 +571,8 @@ class _MapScreenState extends State<MapScreen> {
                 ),
               ),
             ),
+
+            // 🟠 Update Route Button
             ElevatedButton.icon(
               onPressed: () {
                 setState(() {
