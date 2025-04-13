@@ -275,12 +275,38 @@ class _MapScreenState extends State<MapScreen> {
     print("✅ Route updated with new stop order!");
   }
 
-  void _deleteStop(int index) {
+void _deleteStop(int index) async {
+  final confirm = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text("Confirm Deletion"),
+      content: Text("Are you sure you want to delete this stop from the list?"),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: Text("Cancel"),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          child: Text(
+            "Delete",
+            style: TextStyle(color: Colors.red),
+          ),
+        ),
+      ],
+    ),
+  );
+
+  if (confirm == true) {
     setState(() {
       deliveryPoints.removeAt(index);
+      deliveryAddresses.removeAt(index);
+      deliveryStatus.removeAt(index);
     });
     print("🗑️ Stop removed. Remaining stops: $deliveryPoints");
   }
+}
+
 
   // ✅ Method to animate camera to current location
   void animateToCurrentLocation(Position position) {
