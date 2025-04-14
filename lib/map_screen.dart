@@ -275,38 +275,42 @@ class _MapScreenState extends State<MapScreen> {
     print("✅ Route updated with new stop order!");
   }
 
-void _deleteStop(int index) async {
-  final confirm = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text("Confirm Deletion"),
-      content: Text("Are you sure you want to delete this stop from the list?"),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: Text("Cancel"),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: Text(
-            "Delete",
-            style: TextStyle(color: Colors.red),
+  void _deleteStop(int index) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Confirm Deletion"),
+        content:
+            Text("Are you sure you want to delete this stop from the list?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text("Cancel"),
           ),
-        ),
-      ],
-    ),
-  );
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              "Delete",
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
 
-  if (confirm == true) {
-    setState(() {
-      deliveryPoints.removeAt(index);
-      deliveryAddresses.removeAt(index);
-      deliveryStatus.removeAt(index);
-    });
-    print("🗑️ Stop removed. Remaining stops: $deliveryPoints");
+    if (confirm == true) {
+      setState(() {
+        deliveryPoints.removeAt(index);
+        deliveryAddresses.removeAt(index);
+        deliveryStatus.removeAt(index);
+      });
+
+      print("🗑️ Stop removed. Remaining stops: $deliveryPoints");
+
+      // 🔄 Automatically update the route after changes
+      updateRouteAfterChanges();
+    }
   }
-}
-
 
   // ✅ Method to animate camera to current location
   void animateToCurrentLocation(Position position) {
@@ -590,25 +594,6 @@ void _deleteStop(int index) async {
               label: Text("NAVIGATE"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue[700],
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-
-            // 🟠 Update Route Button
-            ElevatedButton.icon(
-              onPressed: () {
-                setState(() {
-                  updateRouteAfterChanges();
-                });
-              },
-              icon: Icon(Icons.refresh, size: 24),
-              label: Text("UPDATE"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange[700],
                 foregroundColor: Colors.white,
                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 shape: RoundedRectangleBorder(

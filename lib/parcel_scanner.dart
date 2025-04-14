@@ -163,19 +163,12 @@ class _ParcelScanningState extends State<ParcelScanning> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: Icon(Icons.home, color: Colors.black87),
-          tooltip: "Go to Home",
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
         title: Text(
           "Scan & Manage Parcels",
           style: TextStyle(
-            color: Colors.black87,
-            fontSize: 20,
+            fontSize: 22,
             fontWeight: FontWeight.bold,
+            color: Colors.black87,
           ),
         ),
         backgroundColor: Colors.white,
@@ -232,146 +225,140 @@ class _ParcelScanningState extends State<ParcelScanning> {
               ]
             : [],
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: isLoading
-                ? Center(child: CircularProgressIndicator())
-                : addressList.isEmpty
-                    ? Center(child: Text("📭 No parcels scanned yet."))
-                    : ListView.builder(
-                        itemCount: addressList.length,
-                        itemBuilder: (context, index) {
-                          final id = addressList[index]["id"].toString();
-                          final selected = selectedItems.contains(id);
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : addressList.isEmpty
+              ? Center(
+                  child: Text("📭 No parcels scanned yet.",
+                      style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+                )
+              : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: ListView.builder(
+                    itemCount: addressList.length,
+                    itemBuilder: (context, index) {
+                      final id = addressList[index]["id"].toString();
+                      final selected = selectedItems.contains(id);
 
-                          return GestureDetector(
-                            onLongPress: () {
-                              setState(() {
-                                selectionMode = true;
-                                selectedItems.add(id);
-                              });
-                            },
-                            child: Card(
-                              elevation: 4,
-                              margin: EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 6),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              color: selected
-                                  ? Colors.blue.withOpacity(0.2)
-                                  : Colors.white,
-                              child: ListTile(
-                                leading: Icon(Icons.location_on,
-                                    color: Colors.red, size: 30),
-                                title: Text(
-                                  addressList[index]["address"],
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                subtitle: Text(
-                                  "📍 Lat: ${addressList[index]["latitude"]}, Lon: ${addressList[index]["longitude"]}",
-                                  style: TextStyle(
-                                      fontSize: 14, color: Colors.grey[700]),
-                                ),
-                                trailing: selectionMode
-                                    ? Checkbox(
-                                        value: selected,
-                                        onChanged: (value) {
-                                          setState(() {
-                                            if (value!) {
-                                              selectedItems.add(id);
-                                            } else {
-                                              selectedItems.remove(id);
-                                            }
-                                          });
-                                        },
-                                      )
-                                    : Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          IconButton(
-                                            icon: Icon(Icons.edit,
-                                                color: Colors.blue),
-                                            onPressed: () => editAddress(
-                                              addressList[index]["id"],
-                                              addressList[index]["address"],
-                                            ),
-                                          ),
-                                          IconButton(
-                                            icon: Icon(Icons.delete,
-                                                color: Colors.red),
-                                            onPressed: () {
-                                              showDialog(
-                                                context: context,
-                                                builder: (context) =>
-                                                    AlertDialog(
-                                                  title: Text("Confirm Delete"),
-                                                  content: Text(
-                                                      "Are you sure you want to delete this address?"),
-                                                  actions: [
-                                                    TextButton(
-                                                      onPressed: () {
-                                                        deleteAddress(
-                                                            addressList[index]
-                                                                ["id"]);
-                                                        Navigator.pop(context);
-                                                      },
-                                                      child: Text("Delete"),
-                                                    ),
-                                                    TextButton(
-                                                      onPressed: () =>
-                                                          Navigator.pop(
-                                                              context),
-                                                      child: Text("Cancel"),
-                                                    ),
-                                                  ],
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      ),
-                              ),
-                            ),
-                          );
+                      return GestureDetector(
+                        onLongPress: () {
+                          setState(() {
+                            selectionMode = true;
+                            selectedItems.add(id);
+                          });
                         },
-                      ),
+                        child: Card(
+                          elevation: 3,
+                          shadowColor: Colors.grey.withOpacity(0.2),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          color: selected ? Colors.blue[50] : Colors.white,
+                          margin: EdgeInsets.symmetric(vertical: 6),
+                          child: ListTile(
+                            leading: Icon(Icons.location_on, color: Colors.red),
+                            title: Text(
+                              addressList[index]["address"],
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            subtitle: Text(
+                              "📍 Lat: ${addressList[index]["latitude"]}, Lon: ${addressList[index]["longitude"]}",
+                              style: TextStyle(color: Colors.grey[700]),
+                            ),
+                            trailing: selectionMode
+                                ? Checkbox(
+                                    value: selected,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        if (value!) {
+                                          selectedItems.add(id);
+                                        } else {
+                                          selectedItems.remove(id);
+                                        }
+                                      });
+                                    },
+                                  )
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: Icon(Icons.edit,
+                                            color: Colors.blue),
+                                        onPressed: () => editAddress(
+                                          addressList[index]["id"],
+                                          addressList[index]["address"],
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(Icons.delete,
+                                            color: Colors.red),
+                                        onPressed: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: Text("Confirm Delete"),
+                                              content: Text(
+                                                  "Are you sure you want to delete this address?"),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () {
+                                                    deleteAddress(
+                                                        addressList[index]
+                                                            ["id"]);
+                                                    Navigator.pop(context);
+                                                  },
+                                                  child: Text("Delete"),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(context),
+                                                  child: Text("Cancel"),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.list_alt),
+            label: "Delivery List",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.camera_alt),
+            label: "Scan",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.map),
+            label: "Map View",
           ),
         ],
-      ),
-      bottomNavigationBar: BottomAppBar(
-        color: Colors.blueGrey[50],
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              IconButton(
-                tooltip: "Generate Optimized Delivery",
-                icon: Icon(Icons.list_alt, color: Colors.green),
-                onPressed: () => Navigator.push(
+        onTap: (index) {
+          switch (index) {
+            case 0:
+              Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => OptimizedDeliveryScreen()),
-                ),
-              ),
-              IconButton(
-                tooltip: "Scan Parcel",
-                icon: Icon(Icons.camera_alt, color: Colors.deepPurple),
-                onPressed: scanParcel,
-              ),
-              IconButton(
-                tooltip: "View Map",
-                icon: Icon(Icons.map, color: Colors.blue),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => MapScreen()),
-                ),
-              ),
-            ],
-          ),
-        ),
+                      builder: (context) => OptimizedDeliveryScreen()));
+              break;
+            case 1:
+              scanParcel();
+              break;
+            case 2:
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (context) => MapScreen()));
+              break;
+          }
+        },
       ),
     );
   }
