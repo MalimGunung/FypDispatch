@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'astar_algorithm.dart';
+import 'greedy_algorithm.dart';
 import 'map_screen.dart';
 
 class OptimizedDeliveryScreen extends StatefulWidget {
