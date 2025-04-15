@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:reorderables/reorderables.dart';
 import 'delivery_complete_screen.dart';
+import 'dart:ui' as ui; // <-- Add this import for custom marker generation
 
 class MapScreen extends StatefulWidget {
   @override
@@ -237,15 +238,18 @@ class _MapScreenState extends State<MapScreen> {
         );
 
         for (int i = 0; i < deliveryPoints.length; i++) {
-          markers.add(
-            Marker(
-              markerId: MarkerId((i + 1).toString()),
-              position: deliveryPoints[i],
-              icon: BitmapDescriptor.defaultMarkerWithHue(
-                  BitmapDescriptor.hueRed),
-              infoWindow: InfoWindow(title: "Stop ${i + 1}"),
-            ),
-          );
+          createNumberedMarker(i + 1, color: Colors.red).then((icon) {
+            setState(() {
+              markers.add(
+                Marker(
+                  markerId: MarkerId((i + 1).toString()),
+                  position: deliveryPoints[i],
+                  icon: icon,
+                  infoWindow: InfoWindow(title: "Stop ${i + 1}"),
+                ),
+              );
+            });
+          });
         }
       });
 
@@ -387,217 +391,298 @@ class _MapScreenState extends State<MapScreen> {
     return polyline;
   }
 
+  // Helper to generate numbered marker icon
+  Future<BitmapDescriptor> createNumberedMarker(int number, {Color color = Colors.red}) async {
+    final int size = 100;
+    final ui.PictureRecorder recorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(recorder);
+    final Paint paint = Paint()..color = color;
+    final double radius = size / 2.0;
+
+    // Draw circle
+    canvas.drawCircle(Offset(radius, radius), radius, paint);
+
+    // Draw number
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: number.toString(),
+        style: TextStyle(
+          fontSize: 48,
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(radius - textPainter.width / 2, radius - textPainter.height / 2),
+    );
+
+    final img = await recorder.endRecording().toImage(size, size);
+    final data = await img.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.fromBytes(data!.buffer.asUint8List());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // Add gradient background
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.blueAccent.shade700),
         title: Text(
           "Optimized Delivery Route",
           style: TextStyle(
-            color: Colors.black87,
-            fontSize: 20,
+            color: Colors.blueAccent.shade700,
+            fontSize: 24,
             fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+            fontFamily: 'Montserrat',
           ),
         ),
-        backgroundColor: Colors.white,
-        elevation: 1,
-        iconTheme: IconThemeData(color: Colors.black87),
+        centerTitle: true,
       ),
-      body: Column(
-        children: [
-          // ETA Card
-          Card(
-            margin: EdgeInsets.all(16),
-            elevation: 4,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Icon(Icons.timer, color: Colors.blue),
-                  SizedBox(width: 12),
-                  Text(
-                    "Estimated Time to Next Stop:",
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Spacer(),
-                  Text(
-                    estimatedTime, // Make sure this is a String
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green[700],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFFe0eafc), Color(0xFFcfdef3)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-
-          // Map Section
-          Expanded(
-            flex: 4,
-            child: GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: LatLng(
-                  currentPosition?.latitude ?? 3.1390,
-                  currentPosition?.longitude ?? 101.6869,
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              // ETA Card
+              Card(
+                margin: EdgeInsets.all(16),
+                elevation: 6,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
                 ),
-                zoom: 12,
-              ),
-              markers: markers,
-              polylines: polylines,
-              myLocationEnabled: true,
-              onMapCreated: (controller) {
-                setState(() {
-                  mapController = controller;
-                });
-              },
-            ),
-          ),
-
-          // Delivery List Section
-          Expanded(
-            flex: 3,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 8,
-                    offset: Offset(0, -4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.all(12),
-                    child: Text(
-                      "Delivery Stops",
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                color: Colors.white.withOpacity(0.97),
+                shadowColor: Colors.blueAccent.withOpacity(0.10),
+                child: Padding(
+                  padding: EdgeInsets.all(18),
+                  child: Row(
+                    children: [
+                      Icon(Icons.timer, color: Colors.blueAccent.shade700, size: 28),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          "Estimated Time to Next Stop:",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'Montserrat',
+                            color: Colors.blueAccent.shade700,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
+                      SizedBox(width: 10),
+                      Text(
+                        estimatedTime,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green[700],
+                          fontFamily: 'Montserrat',
+                        ),
+                      ),
+                    ],
                   ),
-                  Expanded(
-                    child: ReorderableColumn(
-                      onReorder: (int oldIndex, int newIndex) {
-                        setState(() {
-                          if (newIndex > oldIndex) newIndex -= 1;
-                          final item = deliveryPoints.removeAt(oldIndex);
-                          final address = deliveryAddresses.removeAt(oldIndex);
-                          final status = deliveryStatus.removeAt(oldIndex);
+                ),
+              ),
 
-                          deliveryPoints.insert(newIndex, item);
-                          deliveryAddresses.insert(newIndex, address);
-                          deliveryStatus.insert(newIndex, status);
+              // Map Section
+              Expanded(
+                flex: 4,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                    child: GoogleMap(
+                      initialCameraPosition: CameraPosition(
+                        target: LatLng(
+                          currentPosition?.latitude ?? 3.1390,
+                          currentPosition?.longitude ?? 101.6869,
+                        ),
+                        zoom: 12,
+                      ),
+                      markers: markers,
+                      polylines: polylines,
+                      myLocationEnabled: true,
+                      onMapCreated: (controller) {
+                        setState(() {
+                          mapController = controller;
                         });
                       },
-                      children: List.generate(deliveryPoints.length, (index) {
-                        return Card(
-                          key: ValueKey(deliveryPoints[index]),
-                          margin:
-                              EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 2,
-                          child: ListTile(
-                            leading: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: deliveryStatus[index]
-                                    ? Colors.green[100]
-                                    : Colors.orange[100],
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                deliveryStatus[index]
-                                    ? Icons.check
-                                    : Icons.directions_car,
-                                color: deliveryStatus[index]
-                                    ? Colors.green
-                                    : Colors.orange,
-                              ),
-                            ),
-                            title: Text(
-                              "Stop ${index + 1}",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: deliveryStatus[index]
-                                    ? Colors.green[800]
-                                    : Colors.black87,
-                              ),
-                            ),
-                            subtitle: Text(
-                              deliveryAddresses[index],
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey[700],
-                              ),
-                            ),
-                            trailing: IconButton(
-                              icon: Icon(Icons.delete, color: Colors.red[400]),
-                              onPressed: () => _deleteStop(index),
-                            ),
-                          ),
-                        );
-                      }),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+
+              // Delivery List Section
+              Expanded(
+                flex: 3,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.97),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.blueAccent.withOpacity(0.10),
+                        blurRadius: 16,
+                        offset: Offset(0, -6),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: EdgeInsets.all(14),
+                        child: Text(
+                          "Delivery Stops",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blueAccent.shade700,
+                            fontFamily: 'Montserrat',
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: ReorderableColumn(
+                          onReorder: (int oldIndex, int newIndex) {
+                            setState(() {
+                              if (newIndex > oldIndex) newIndex -= 1;
+                              final item = deliveryPoints.removeAt(oldIndex);
+                              final address = deliveryAddresses.removeAt(oldIndex);
+                              final status = deliveryStatus.removeAt(oldIndex);
+
+                              deliveryPoints.insert(newIndex, item);
+                              deliveryAddresses.insert(newIndex, address);
+                              deliveryStatus.insert(newIndex, status);
+                            });
+                          },
+                          children: List.generate(deliveryPoints.length, (index) {
+                            return Card(
+                              key: ValueKey(deliveryPoints[index]),
+                              margin: EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              elevation: 4,
+                              shadowColor: Colors.blueAccent.withOpacity(0.10),
+                              child: ListTile(
+                                leading: Container(
+                                  width: 44,
+                                  height: 44,
+                                  decoration: BoxDecoration(
+                                    color: deliveryStatus[index]
+                                        ? Colors.green[100]
+                                        : Colors.blueAccent.withOpacity(0.10),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    deliveryStatus[index]
+                                        ? Icons.check
+                                        : Icons.directions_car,
+                                    color: deliveryStatus[index]
+                                        ? Colors.green
+                                        : Colors.blueAccent.shade700,
+                                  ),
+                                ),
+                                title: Text(
+                                  "Stop ${index + 1}",
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    color: deliveryStatus[index]
+                                        ? Colors.green[800]
+                                        : Colors.blueAccent.shade700,
+                                    fontFamily: 'Montserrat',
+                                  ),
+                                ),
+                                subtitle: Text(
+                                  deliveryAddresses[index],
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    color: Colors.blueGrey[700],
+                                    fontFamily: 'Montserrat',
+                                  ),
+                                ),
+                                trailing: IconButton(
+                                  icon: Icon(Icons.delete, color: Colors.red[400]),
+                                  onPressed: () => _deleteStop(index),
+                                ),
+                              ),
+                            );
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
 
       // Bottom Navigation Bar
       bottomNavigationBar: Container(
         height: 80,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Colors.white.withOpacity(0.97),
           boxShadow: [
             BoxShadow(
-              color: Colors.black12,
-              blurRadius: 10,
-              offset: Offset(0, -4),
+              color: Colors.blueAccent.withOpacity(0.10),
+              blurRadius: 14,
+              offset: Offset(0, -6),
             ),
           ],
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             // 🔵 Navigate Button
-            ElevatedButton.icon(
-              onPressed: () {
-                if (deliveryPoints.isNotEmpty) {
-                  setState(() {
-                    isInNavigationMode = true; // ✅ Trigger auto-navigate
-                  });
-                  launchGoogleMapsNavigation(deliveryPoints.first);
-                }
-              },
-              icon: Icon(Icons.navigation, size: 24),
-              label: Text("NAVIGATE"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue[700],
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            SizedBox(
+              width: 180,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  if (deliveryPoints.isNotEmpty) {
+                    setState(() {
+                      isInNavigationMode = true; // ✅ Trigger auto-navigate
+                    });
+                    launchGoogleMapsNavigation(deliveryPoints.first);
+                  }
+                },
+                icon: Icon(Icons.navigation, size: 26),
+                label: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12.0),
+                  child: Text(
+                    "NAVIGATE",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      fontFamily: 'Montserrat',
+                    ),
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent.shade700,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  elevation: 6,
+                  shadowColor: Colors.blueAccent.withOpacity(0.22),
                 ),
               ),
             ),
