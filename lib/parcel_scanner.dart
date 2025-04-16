@@ -202,12 +202,18 @@ class _ParcelScanningState extends State<ParcelScanning> {
                         children: [
                           TextFormField(
                             controller: addressController,
+                            maxLines: 5, // Increased to 5 lines
                             decoration: InputDecoration(
                               labelText: "New Address",
-                              prefixIcon: Icon(Icons.location_on_outlined),
+                              prefixIcon: Padding(
+                                padding: EdgeInsets.only(bottom: 80), // Increased padding
+                                child: Icon(Icons.location_on_outlined),
+                              ),
                               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                               filled: true,
                               fillColor: Colors.blueGrey[50],
+                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 25), // Increased padding
+                              alignLabelWithHint: true,
                             ),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
@@ -215,7 +221,11 @@ class _ParcelScanningState extends State<ParcelScanning> {
                               }
                               return null;
                             },
-                            style: TextStyle(fontFamily: 'Montserrat'),
+                            style: TextStyle(
+                              fontFamily: 'Montserrat',
+                              fontSize: 18, // Increased font size
+                              height: 1.6, // Increased line height
+                            ),
                             onChanged: (value) {
                               fetchSuggestions(value, setState);
                             },
@@ -434,72 +444,65 @@ class _ParcelScanningState extends State<ParcelScanning> {
 
                         return Dismissible(
                           key: Key(id),
-                          background: Container(
-                            alignment: Alignment.centerLeft,
-                            padding: EdgeInsets.only(left: 24),
-                            color: const Color.fromARGB(255, 37, 233, 8).withOpacity(0.15),
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit, color: const Color.fromARGB(255, 37, 233, 86)),
-                                SizedBox(width: 8),
-                                Text("Edit", style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          ),
-                          secondaryBackground: Container(
-                            alignment: Alignment.centerRight,
-                            padding: EdgeInsets.only(right: 24),
-                            color: Colors.redAccent.withOpacity(0.15),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Icon(Icons.delete, color: Colors.redAccent),
-                                SizedBox(width: 8),
-                                Text("Delete", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          ),
+                          direction: DismissDirection.endToStart,
                           confirmDismiss: (direction) async {
-                            if (direction == DismissDirection.startToEnd) {
-                              // Swipe right: Edit
-                              editAddress(
-                                addressList[index]["id"],
-                                addressList[index]["address"],
-                              );
-                              return false; // Don't dismiss, just open edit dialog
-                            } else if (direction == DismissDirection.endToStart) {
-                              // Swipe left: Delete
-                              final confirm = await showDialog<bool>(
-                                context: context,
-                                builder: (context) => AlertDialog(
+                            return await showDialog(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
                                   title: Text("Confirm Delete"),
                                   content: Text("Are you sure you want to delete this address?"),
                                   actions: [
                                     TextButton(
-                                      onPressed: () => Navigator.pop(context, true),
-                                      child: Text("Delete", style: TextStyle(color: Colors.redAccent)),
+                                      child: Text("Cancel"),
+                                      onPressed: () => Navigator.of(context).pop(false),
                                     ),
                                     TextButton(
-                                      onPressed: () => Navigator.pop(context, false),
-                                      child: Text("Cancel"),
+                                      child: Text("Delete", style: TextStyle(color: Colors.red)),
+                                      onPressed: () => Navigator.of(context).pop(true),
                                     ),
                                   ],
-                                ),
-                              );
-                              if (confirm == true) {
-                                await deleteAddress(addressList[index]["id"]);
-                                return true;
-                              }
-                              return false;
-                            }
-                            return false;
+                                );
+                              },
+                            );
                           },
+                          onDismissed: (direction) {
+                            deleteAddress(id);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("Address deleted")),
+                            );
+                          },
+                          background: Container(
+                            color: Colors.red,
+                            padding: EdgeInsets.symmetric(horizontal: 20),
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: Icon(
+                              Icons.delete,
+                              color: Colors.white,
+                            ),
+                          ),
                           child: GestureDetector(
                             onLongPress: () {
                               setState(() {
                                 selectionMode = true;
                                 selectedItems.add(id);
                               });
+                            },
+                            onTap: () {
+                              if (selectionMode) {
+                                setState(() {
+                                  if (selected) {
+                                    selectedItems.remove(id);
+                                  } else {
+                                    selectedItems.add(id);
+                                  }
+                                });
+                              } else {
+                                editAddress(
+                                  addressList[index]["id"],
+                                  addressList[index]["address"],
+                                );
+                              }
                             },
                             child: Card(
                               elevation: selected ? 10 : 5,

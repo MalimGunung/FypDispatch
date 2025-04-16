@@ -10,8 +10,6 @@ class MLKitOCR {
           await textRecognizer.processImage(inputImage);
 
       String extractedText = recognizedText.text;
-
-      // Extract only address-like text
       return _filterAddressText(extractedText);
     } catch (e) {
       print("OCR Error: $e");
@@ -19,39 +17,50 @@ class MLKitOCR {
     }
   }
 
-  // **Extracts Only Structured Addresses**
+  // ✅ Custom filtering for Malaysian residential addresses
   String _filterAddressText(String rawText) {
     List<String> lines = rawText.split("\n");
     List<String> addressLines = [];
-    bool foundAddress = false;
+    bool found = false;
 
     for (String line in lines) {
       line = line.trim();
 
-      // Detect and ignore personal names (e.g., "Ali Bin Ahmad")
-      if (RegExp(r'^[A-Za-z\s]+$').hasMatch(line)) {
+      // Skip empty or overly short lines
+      if (line.isEmpty || line.length < 3) continue;
+
+      // ✅ Match unit/block pattern like "B-01-13A", "A-2-5"
+      if (RegExp(r'^[A-Z]-\d{1,2}-\d{1,3}[A-Z]?$').hasMatch(line)) {
+        found = true;
+        addressLines.add(line);
         continue;
       }
 
-      // Detect House/Building No & Street (e.g., "No. 12, Lorong Damai 5")
-      if (RegExp(r'^(No\.|Lot|Blok|Jalan|Lorong|Persiaran|Taman|Bandar|Lebuh)').hasMatch(line)) {
-        foundAddress = true;
+      // ✅ Match building/area names: Pangsapuri, Taman, Residensi, Apartment, Flat, etc.
+      if (RegExp(r'\b(Pangsapuri|Taman|Residensi|Apartment|Flat|Kondominium|Desa|Bandar)\b',
+              caseSensitive: false)
+          .hasMatch(line)) {
+        found = true;
         addressLines.add(line);
+        continue;
       }
 
-      // Detect Postal Code & City (e.g., "81100 Johor Bahru, Johor")
-      if (RegExp(r'^\d{5}').hasMatch(line)) {
-        foundAddress = true;
+      // ✅ Match city & state like "Kajang, Selangor"
+      if (RegExp(r'^[A-Za-z\s]+,\s*[A-Za-z\s]+$').hasMatch(line)) {
+        found = true;
         addressLines.add(line);
+        continue;
       }
 
-      // Detect Country (e.g., "Malaysia")
-      if (line.toLowerCase().contains("malaysia")) {
-        foundAddress = true;
+      // ✅ Optional: catch additional address elements (Jalan, Lorong, etc.)
+      if (RegExp(r'^(Jalan|Lorong|Persiaran|Lebuhraya)', caseSensitive: false)
+          .hasMatch(line)) {
+        found = true;
         addressLines.add(line);
+        continue;
       }
     }
 
-    return foundAddress ? addressLines.join("\n") : "No valid address detected";
+    return found ? addressLines.join("\n") : "No valid address detected";
   }
 }
