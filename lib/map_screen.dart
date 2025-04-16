@@ -433,6 +433,10 @@ class _MapScreenState extends State<MapScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: const Color.fromARGB(255, 7, 7, 7)),
+          onPressed: () => Navigator.pop(context),
+        ),
         iconTheme: IconThemeData(color: Colors.blueAccent.shade700),
         title: Text(
           "Optimized Delivery Route",

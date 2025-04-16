@@ -113,47 +113,205 @@ class _ParcelScanningState extends State<ParcelScanning> {
   Future<void> editAddress(String documentId, String currentAddress) async {
     TextEditingController addressController =
         TextEditingController(text: currentAddress);
+    final formKey = GlobalKey<FormState>();
+    List<String> suggestions = [];
+    bool isLoadingSuggestions = false;
+    int lastRequestId = 0;
+
+    Future<void> fetchSuggestions(String query, void Function(void Function()) setState) async {
+      final int requestId = ++lastRequestId;
+      if (query.trim().isEmpty) {
+        setState(() {
+          suggestions = [];
+          isLoadingSuggestions = false;
+        });
+        return;
+      }
+      setState(() {
+        isLoadingSuggestions = true;
+      });
+      try {
+        // Focus autocomplete on Malaysia by appending ', Malaysia' if not present
+        String searchQuery = query;
+        if (!searchQuery.toLowerCase().contains('malaysia')) {
+          searchQuery = '$searchQuery, Malaysia';
+        }
+        List<Location> locations = await locationFromAddress(searchQuery);
+        List<String> newSuggestions = [];
+        for (var loc in locations) {
+          final placemarks = await placemarkFromCoordinates(loc.latitude, loc.longitude);
+          if (placemarks.isNotEmpty) {
+            final p = placemarks.first;
+            // Only include suggestions in Malaysia
+            if ((p.country ?? '').toLowerCase().contains('malaysia')) {
+              String addr = [
+                if (p.street != null && p.street!.isNotEmpty) p.street,
+                if (p.subLocality != null && p.subLocality!.isNotEmpty) p.subLocality,
+                if (p.locality != null && p.locality!.isNotEmpty) p.locality,
+                if (p.administrativeArea != null && p.administrativeArea!.isNotEmpty) p.administrativeArea,
+                if (p.country != null && p.country!.isNotEmpty) p.country,
+              ].whereType<String>().join(', ');
+              if (addr.isNotEmpty) newSuggestions.add(addr);
+            }
+          }
+        }
+        // Only update if this is the latest request
+        if (requestId == lastRequestId) {
+          setState(() {
+            suggestions = newSuggestions.toSet().toList();
+            isLoadingSuggestions = false;
+          });
+        }
+      } catch (_) {
+        if (requestId == lastRequestId) {
+          setState(() {
+            suggestions = [];
+            isLoadingSuggestions = false;
+          });
+        }
+      }
+    }
 
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          title: Text("Edit Address"),
-          content: TextField(
-            controller: addressController,
-            decoration: InputDecoration(labelText: "New Address"),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                String newAddress = addressController.text.trim();
-                if (newAddress.isNotEmpty) {
-                  var coordinates = await getCoordinates(newAddress);
-                  if (coordinates != null) {
-                    await firebaseService.updateParcel(
-                      documentId,
-                      newAddress,
-                      coordinates["latitude"]!,
-                      coordinates["longitude"]!,
-                    );
-                    fetchStoredAddresses();
-                  } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(
-                              "❌ Failed to get location for the new address!")),
-                    );
-                  }
-                }
-                Navigator.pop(context);
-              },
-              child: Text("Save"),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("Cancel"),
-            ),
-          ],
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.edit_location_alt, color: Colors.blueAccent.shade700, size: 38),
+                      SizedBox(height: 10),
+                      Text(
+                        "Edit Address",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                          fontFamily: 'Montserrat',
+                          color: Colors.blueAccent.shade700,
+                        ),
+                      ),
+                      SizedBox(height: 18),
+                      Stack(
+                        children: [
+                          TextFormField(
+                            controller: addressController,
+                            decoration: InputDecoration(
+                              labelText: "New Address",
+                              prefixIcon: Icon(Icons.location_on_outlined),
+                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              filled: true,
+                              fillColor: Colors.blueGrey[50],
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return "Address cannot be empty";
+                              }
+                              return null;
+                            },
+                            style: TextStyle(fontFamily: 'Montserrat'),
+                            onChanged: (value) {
+                              fetchSuggestions(value, setState);
+                            },
+                          ),
+                          if (isLoadingSuggestions)
+                            Positioned(
+                              right: 10,
+                              top: 12,
+                              child: SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            ),
+                        ],
+                      ),
+                      if (suggestions.isNotEmpty)
+                        Container(
+                          margin: EdgeInsets.only(top: 4),
+                          constraints: BoxConstraints(maxHeight: 120),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            border: Border.all(color: Colors.blueGrey.shade100),
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 4,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: suggestions.length,
+                            itemBuilder: (context, idx) {
+                              return ListTile(
+                                dense: true,
+                                title: Text(
+                                  suggestions[idx],
+                                  style: TextStyle(fontFamily: 'Montserrat'),
+                                ),
+                                onTap: () {
+                                  setState(() {
+                                    addressController.text = suggestions[idx];
+                                    suggestions = [];
+                                  });
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      SizedBox(height: 22),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton.icon(
+                            icon: Icon(Icons.save, color: Colors.green),
+                            label: Text("Save", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                            onPressed: () async {
+                              if (formKey.currentState!.validate()) {
+                                String newAddress = addressController.text.trim();
+                                var coordinates = await getCoordinates(newAddress);
+                                if (coordinates != null) {
+                                  await firebaseService.updateParcel(
+                                    documentId,
+                                    newAddress,
+                                    coordinates["latitude"]!,
+                                    coordinates["longitude"]!,
+                                  );
+                                  fetchStoredAddresses();
+                                  Navigator.pop(context);
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                        content: Text(
+                                            "❌ Failed to get location for the new address!")),
+                                  );
+                                }
+                              }
+                            },
+                          ),
+                          SizedBox(width: 8),
+                          TextButton.icon(
+                            icon: Icon(Icons.cancel, color: Colors.redAccent),
+                            label: Text("Cancel", style: TextStyle(color: Colors.redAccent)),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
         );
       },
     );
@@ -175,6 +333,10 @@ class _ParcelScanningState extends State<ParcelScanning> {
       appBar: AppBar(
         backgroundColor: Colors.white.withOpacity(0.85),
         elevation: 2,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: const Color.fromARGB(255, 7, 7, 7)),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(
           "Scan & Manage Parcels",
           style: TextStyle(
@@ -198,7 +360,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
                         : Icons.deselect,
                     color: selectedItems.length < addressList.length
                         ? Colors.green // green for select all
-                        : Colors.green, // keep green for deselect all for consistency
+                        : const Color.fromARGB(255, 18, 148, 22), // keep green for deselect all for consistency
                   ),
                   onPressed: () {
                     setState(() {
@@ -270,102 +432,126 @@ class _ParcelScanningState extends State<ParcelScanning> {
                         final id = addressList[index]["id"].toString();
                         final selected = selectedItems.contains(id);
 
-                        return GestureDetector(
-                          onLongPress: () {
-                            setState(() {
-                              selectionMode = true;
-                              selectedItems.add(id);
-                            });
-                          },
-                          child: Card(
-                            elevation: selected ? 10 : 5,
-                            shadowColor: themeBlue.withOpacity(0.13),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
+                        return Dismissible(
+                          key: Key(id),
+                          background: Container(
+                            alignment: Alignment.centerLeft,
+                            padding: EdgeInsets.only(left: 24),
+                            color: const Color.fromARGB(255, 37, 233, 8).withOpacity(0.15),
+                            child: Row(
+                              children: [
+                                Icon(Icons.edit, color: const Color.fromARGB(255, 37, 233, 86)),
+                                SizedBox(width: 8),
+                                Text("Edit", style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold)),
+                              ],
                             ),
-                            color: selected
-                                ? themeBlue.withOpacity(0.10)
-                                : Colors.white.withOpacity(0.97),
-                            margin: EdgeInsets.symmetric(vertical: 8),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: themeBlue.withOpacity(0.13),
-                                child: Icon(Icons.location_on, color: themeBlue),
-                              ),
-                              title: Text(
+                          ),
+                          secondaryBackground: Container(
+                            alignment: Alignment.centerRight,
+                            padding: EdgeInsets.only(right: 24),
+                            color: Colors.redAccent.withOpacity(0.15),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                Icon(Icons.delete, color: Colors.redAccent),
+                                SizedBox(width: 8),
+                                Text("Delete", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+                              ],
+                            ),
+                          ),
+                          confirmDismiss: (direction) async {
+                            if (direction == DismissDirection.startToEnd) {
+                              // Swipe right: Edit
+                              editAddress(
+                                addressList[index]["id"],
                                 addressList[index]["address"],
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 17,
-                                  color: themeBlue,
-                                  fontFamily: 'Montserrat',
+                              );
+                              return false; // Don't dismiss, just open edit dialog
+                            } else if (direction == DismissDirection.endToStart) {
+                              // Swipe left: Delete
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: Text("Confirm Delete"),
+                                  content: Text("Are you sure you want to delete this address?"),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, true),
+                                      child: Text("Delete", style: TextStyle(color: Colors.redAccent)),
+                                    ),
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context, false),
+                                      child: Text("Cancel"),
+                                    ),
+                                  ],
                                 ),
+                              );
+                              if (confirm == true) {
+                                await deleteAddress(addressList[index]["id"]);
+                                return true;
+                              }
+                              return false;
+                            }
+                            return false;
+                          },
+                          child: GestureDetector(
+                            onLongPress: () {
+                              setState(() {
+                                selectionMode = true;
+                                selectedItems.add(id);
+                              });
+                            },
+                            child: Card(
+                              elevation: selected ? 10 : 5,
+                              shadowColor: themeBlue.withOpacity(0.13),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
                               ),
-                              subtitle: Padding(
-                                padding: const EdgeInsets.only(top: 4.0),
-                                child: Text(
-                                  "📍 Lat: ${addressList[index]["latitude"]}, Lon: ${addressList[index]["longitude"]}",
+                              color: selected
+                                  ? themeBlue.withOpacity(0.10)
+                                  : Colors.white.withOpacity(0.97),
+                              margin: EdgeInsets.symmetric(vertical: 8),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: themeBlue.withOpacity(0.13),
+                                  child: Icon(Icons.location_on, color: themeBlue),
+                                ),
+                                title: Text(
+                                  addressList[index]["address"],
                                   style: TextStyle(
-                                    color: Colors.blueGrey[700],
-                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 17,
+                                    color: themeBlue,
                                     fontFamily: 'Montserrat',
                                   ),
                                 ),
-                              ),
-                              trailing: selectionMode
-                                  ? Checkbox(
-                                      value: selected,
-                                      activeColor: themeBlue,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          if (value!) {
-                                            selectedItems.add(id);
-                                          } else {
-                                            selectedItems.remove(id);
-                                          }
-                                        });
-                                      },
-                                    )
-                                  : Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        IconButton(
-                                          icon: Icon(Icons.edit, color: themeBlue),
-                                          onPressed: () => editAddress(
-                                            addressList[index]["id"],
-                                            addressList[index]["address"],
-                                          ),
-                                        ),
-                                        IconButton(
-                                          icon: Icon(Icons.delete, color: Colors.redAccent), // ensure red
-                                          onPressed: () {
-                                            showDialog(
-                                              context: context,
-                                              builder: (context) => AlertDialog(
-                                                title: Text("Confirm Delete"),
-                                                content: Text(
-                                                    "Are you sure you want to delete this address?"),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () {
-                                                      deleteAddress(
-                                                          addressList[index]["id"]);
-                                                      Navigator.pop(context);
-                                                    },
-                                                    child: Text("Delete", style: TextStyle(color: Colors.redAccent)), // ensure red
-                                                  ),
-                                                  TextButton(
-                                                    onPressed: () =>
-                                                        Navigator.pop(context),
-                                                    child: Text("Cancel"),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ],
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 4.0),
+                                  child: Text(
+                                    "📍 Lat: ${addressList[index]["latitude"]}, Lon: ${addressList[index]["longitude"]}",
+                                    style: TextStyle(
+                                      color: Colors.blueGrey[700],
+                                      fontSize: 14,
+                                      fontFamily: 'Montserrat',
                                     ),
+                                  ),
+                                ),
+                                trailing: selectionMode
+                                    ? Checkbox(
+                                        value: selected,
+                                        activeColor: themeBlue,
+                                        onChanged: (value) {
+                                          setState(() {
+                                            if (value!) {
+                                              selectedItems.add(id);
+                                            } else {
+                                              selectedItems.remove(id);
+                                            }
+                                          });
+                                        },
+                                      )
+                                    : null, // Removed edit and delete buttons
+                              ),
                             ),
                           ),
                         );

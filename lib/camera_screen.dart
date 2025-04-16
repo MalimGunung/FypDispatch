@@ -43,7 +43,7 @@ class _CameraScreenState extends State<CameraScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.blueAccent),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: const Color.fromARGB(255, 7, 7, 7)),
           onPressed: () => Navigator.pop(context),
         ),
         centerTitle: true,
