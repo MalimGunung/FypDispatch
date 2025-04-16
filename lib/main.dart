@@ -221,28 +221,39 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         SizedBox(height: 8),
         ParcelCard(
-          title: "Premium Delivery to Kuala Lumpur",
-          date: "Completed 2 days ago",
-          color: Colors.deepPurple[50],
-          image: "assets/box_delivery.png",
-          status: "Delivered",
+          title: "Total Distance Covered Today",
+          date: "234.5 kilometers",
+          color: Colors.blue[50],
+          status: "Active",
+          statusColor: Colors.blue,
+        ),
+        ParcelCard(
+          title: "Average Delivery Time",
+          date: "45 minutes per parcel",
+          color: Colors.green[50],
+          status: "Good",
           statusColor: Colors.green,
         ),
         ParcelCard(
-          title: "Urgent Medical Supplies to Johor",
-          date: "Completed 5 days ago",
-          color: Colors.teal[50],
-          image: "assets/express.png",
-          status: "Express",
-          statusColor: Colors.red,
+          title: "Fuel Consumption",
+          date: "32.4 liters used today",
+          color: Colors.amber[50],
+          status: "Normal",
+          statusColor: Colors.orange,
         ),
         ParcelCard(
-          title: "Fragile Items to Penang",
-          date: "Completed 1 week ago",
-          color: Colors.orange[50],
-          image: "assets/fragile.png",
-          status: "Handled",
-          statusColor: Colors.blue,
+          title: "Successful Deliveries",
+          date: "16 out of 16 parcels",
+          color: Colors.purple[50],
+          status: "100%",
+          statusColor: Colors.purple,
+        ),
+        ParcelCard(
+          title: "Carbon Footprint",
+          date: "75.2 kg CO₂ emissions",
+          color: Colors.teal[50],
+          status: "-12%",
+          statusColor: Colors.teal,
         ),
       ],
     );
@@ -288,7 +299,6 @@ class ParcelCard extends StatelessWidget {
   final String title;
   final String date;
   final Color? color;
-  final String image;
   final String status;
   final Color statusColor;
 
@@ -297,7 +307,6 @@ class ParcelCard extends StatelessWidget {
     required this.title,
     required this.date,
     this.color,
-    required this.image,
     required this.status,
     required this.statusColor,
   });
@@ -313,15 +322,6 @@ class ParcelCard extends StatelessWidget {
         padding: const EdgeInsets.all(16.0),
         child: Row(
           children: [
-            Container(
-              padding: EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Image.asset(image, height: 40, width: 40),
-            ),
-            SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -387,59 +387,83 @@ class NewsCard extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 0,
-      child: Container(
-        decoration: BoxDecoration(
-          color: color ?? Colors.grey[100],
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(icon, size: 24, color: Colors.indigo),
-                  ),
-                  SizedBox(width: 12),
-                  Text(
-                    date,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey[600],
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width - 32),
+        child: Container(
+          decoration: BoxDecoration(
+            color: color ?? Colors.grey[100],
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: Container(
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      fontSize: 18,
+                        child: Icon(icon, size: 20, color: Colors.indigo),
+                      ),
                     ),
-              ),
-              SizedBox(height: 8),
-              Text(
-                snippet,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerRight,
-                child: Text(
-                  "Read more →",
-                  style: TextStyle(
-                    color: Colors.indigo,
-                    fontWeight: FontWeight.w600,
-                  ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        date,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: Colors.grey[600],
+                            ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ],
+                SizedBox(height: 12),
+                Text(
+                  title,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontSize: 18,
+                      ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
+                SizedBox(height: 8),
+                Text(
+                  snippet,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 3,
+                ),
+                SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () {},
+                      style: TextButton.styleFrom(
+                        minimumSize: Size.zero,
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      ),
+                      child: Text(
+                        "Read more →",
+                        style: TextStyle(
+                          color: Colors.indigo,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
