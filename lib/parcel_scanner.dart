@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'firebase_service.dart';
 import 'mlkit_ocr.dart';
-import 'camera_screen.dart';
 import 'package:geocoding/geocoding.dart';
 import 'optimized_delivery_screen.dart';
 import 'map_screen.dart';
+import 'package:image_picker/image_picker.dart';
+
 
 class ParcelScanning extends StatefulWidget {
   @override
@@ -37,55 +38,54 @@ class _ParcelScanningState extends State<ParcelScanning> {
   }
 
   // ✅ Capture and scan an address from an image
-  Future<void> scanParcel() async {
-    final imagePath = await Navigator.push(
-      context,
-      MaterialPageRoute(
-          builder: (context) => CameraScreen()), // ✅ Call CameraScreen
+Future<void> scanParcel() async {
+  final ImagePicker _picker = ImagePicker();
+  final pickedFile = await _picker.pickImage(source: ImageSource.camera);
+
+  if (pickedFile != null) {
+    final imagePath = pickedFile.path;
+
+    String address = await mlkitOCR.extractTextFromImage(imagePath);
+
+    if (address.isEmpty || address == "No valid address detected") {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ No valid address detected. Please try again.")),
+      );
+      return;
+    }
+
+    var coordinates = await getCoordinates(address);
+
+    if (coordinates == null ||
+        !coordinates.containsKey("latitude") ||
+        !coordinates.containsKey("longitude")) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Failed to get location for this address!")),
+      );
+      print("❌ Geocoding Failed for Address: $address");
+      return;
+    }
+
+    double latitude = coordinates["latitude"]!;
+    double longitude = coordinates["longitude"]!;
+
+    print("✅ Address: $address");
+    print("📍 Latitude: $latitude, Longitude: $longitude");
+
+    await firebaseService.saveParcelData(
+      address,
+      latitude,
+      longitude,
     );
 
-    if (imagePath != null) {
-      String address = await mlkitOCR.extractTextFromImage(imagePath);
+    fetchStoredAddresses(); // Refresh UI
 
-      if (address.isEmpty || address == "No valid address detected") {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text("❌ No valid address detected. Please try again.")),
-        );
-        return;
-      }
-
-      var coordinates = await getCoordinates(address);
-
-      if (coordinates == null ||
-          !coordinates.containsKey("latitude") ||
-          !coordinates.containsKey("longitude")) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("❌ Failed to get location for this address!")),
-        );
-        print("❌ Geocoding Failed for Address: $address");
-        return;
-      }
-
-      double latitude = coordinates["latitude"]!;
-      double longitude = coordinates["longitude"]!;
-
-      print("✅ Address: $address");
-      print("📍 Latitude: $latitude, Longitude: $longitude");
-
-      await firebaseService.saveParcelData(
-        address,
-        latitude,
-        longitude,
-      );
-
-      fetchStoredAddresses(); // Refresh UI with updated data
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("✅ Parcel Added Successfully!")),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("✅ Parcel Added Successfully!")),
+    );
   }
+  }
+
 
   // ✅ Convert address to latitude and longitude
   Future<Map<String, double>?> getCoordinates(String address) async {

@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'package:collection/collection.dart';// ✅ Import built-in PriorityQueue
 import 'package:geolocator/geolocator.dart';
 import 'firebase_service.dart';
 import 'location_service.dart';
@@ -7,121 +6,98 @@ import 'location_service.dart';
 class AStarRouteOptimizer {
   final FirebaseService firebaseService = FirebaseService();
 
-  // ✅ Haversine formula to calculate distance between two points
+  // ✅ Haversine formula
   double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
     const R = 6371; // Earth's radius in KM
     double dLat = (lat2 - lat1) * pi / 180;
     double dLon = (lon2 - lon1) * pi / 180;
     double a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1 * pi / 180) *
-            cos(lat2 * pi / 180) *
-            sin(dLon / 2) *
-            sin(dLon / 2);
+        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) *
+        sin(dLon / 2) * sin(dLon / 2);
     double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    return R * c; // Distance in KM
+    return R * c;
   }
 
-  // ✅ A-Star Algorithm for optimized delivery sequence
+  double _totalRouteDistance(List<Map<String, dynamic>> route) {
+    double totalDistance = 0.0;
+    for (int i = 0; i < route.length - 1; i++) {
+      totalDistance += _calculateDistance(
+        route[i]['latitude'],
+        route[i]['longitude'],
+        route[i + 1]['latitude'],
+        route[i + 1]['longitude'],
+      );
+    }
+    return totalDistance;
+  }
+
+  List<Map<String, dynamic>> _twoOptSwap(List<Map<String, dynamic>> route, int i, int k) {
+    List<Map<String, dynamic>> newRoute = [];
+    newRoute.addAll(route.sublist(0, i));
+    newRoute.addAll(route.sublist(i, k + 1).reversed);
+    newRoute.addAll(route.sublist(k + 1));
+    return newRoute;
+  }
+
+  List<Map<String, dynamic>> _applyTwoOpt(List<Map<String, dynamic>> route) {
+    double bestDistance = _totalRouteDistance(route);
+    List<Map<String, dynamic>> bestRoute = List.from(route);
+
+    bool improved = true;
+    while (improved) {
+      improved = false;
+
+      for (int i = 1; i < route.length - 2; i++) {
+        for (int k = i + 1; k < route.length - 1; k++) {
+          List<Map<String, dynamic>> newRoute = _twoOptSwap(bestRoute, i, k);
+          double newDistance = _totalRouteDistance(newRoute);
+
+          if (newDistance < bestDistance) {
+            bestDistance = newDistance;
+            bestRoute = newRoute;
+            improved = true;
+          }
+        }
+      }
+    }
+
+    return bestRoute;
+  }
+
   Future<List<Map<String, dynamic>>> getOptimizedDeliverySequence() async {
     List<Map<String, dynamic>> addresses = await firebaseService.getStoredAddresses();
-
-    if (addresses.isEmpty) {
-      print("❌ No addresses found for optimization.");
-      return [];
-    }
+    if (addresses.isEmpty) return [];
 
     Position? currentLocation = await LocationService.getCurrentLocation();
-    if (currentLocation == null) {
-      print("❌ Unable to get dispatcher's location. Make sure GPS is enabled.");
-      return [];
-    }
+    if (currentLocation == null) return [];
 
-    print("📍 Running A-Star Algorithm for ${addresses.length} locations.");
-    print("🚀 Dispatcher Start Location: Lat: ${currentLocation.latitude}, Lon: ${currentLocation.longitude}");
+    double currentLat = currentLocation.latitude;
+    double currentLon = currentLocation.longitude;
 
-    List<Map<String, dynamic>> optimizedRoute = [];
-    Set<String> visited = {};
-    
-    // ✅ Initialize PriorityQueue
-    PriorityQueue<Map<String, dynamic>> openSet = PriorityQueue<Map<String, dynamic>>(
-        (a, b) => (a["fScore"] as double).compareTo(b["fScore"] as double));
+    List<Map<String, dynamic>> route = [];
+    while (addresses.isNotEmpty) {
+      Map<String, dynamic> nearest = addresses.first;
+      double minDistance = _calculateDistance(currentLat, currentLon, nearest['latitude'], nearest['longitude']);
 
-    // ✅ Set the first location as the dispatcher's GPS location
-    double startLat = currentLocation.latitude;
-    double startLon = currentLocation.longitude;
-
-    // ✅ Find the first closest delivery stop to start from
-    Map<String, dynamic>? firstStop;
-    double minDistance = double.infinity;
-
-    for (var address in addresses) {
-      double distance = _calculateDistance(startLat, startLon, address["latitude"], address["longitude"]);
-      if (distance < minDistance) {
-        minDistance = distance;
-        firstStop = address;
-      }
-    }
-
-    if (firstStop == null) {
-      print("❌ No valid first stop found.");
-      return [];
-    }
-
-    optimizedRoute.add(firstStop);
-    visited.add(firstStop["id"]);
-    startLat = firstStop["latitude"];
-    startLon = firstStop["longitude"];
-    addresses.remove(firstStop);
-
-    // ✅ Add remaining locations to priority queue with fScore = gScore + hScore
-    for (var address in addresses) {
-      double gScore = _calculateDistance(startLat, startLon, address["latitude"], address["longitude"]);
-      double hScore = addresses.isNotEmpty
-          ? _calculateDistance(address["latitude"], address["longitude"], addresses[0]["latitude"], addresses[0]["longitude"])
-          : 0;
-      address["gScore"] = gScore;
-      address["hScore"] = hScore;
-      address["fScore"] = gScore + hScore;
-      openSet.add(address);
-    }
-
-    while (openSet.isNotEmpty) {
-      // ✅ Get the location with the lowest fScore
-      Map<String, dynamic> current = openSet.removeFirst();
-
-      if (visited.contains(current["id"])) continue;
-
-      visited.add(current["id"]);
-      optimizedRoute.add(current);
-
-      print("✅ Next Stop: ${current["address"]} | Lat: ${current["latitude"]}, Lon: ${current["longitude"]}");
-
-      startLat = current["latitude"];
-      startLon = current["longitude"];
-
-      // ✅ Recalculate fScore for remaining locations
-      List<Map<String, dynamic>> newSet = [];
       for (var address in addresses) {
-        if (visited.contains(address["id"])) continue;
-
-        double gScore = _calculateDistance(startLat, startLon, address["latitude"], address["longitude"]);
-        double hScore = addresses.isNotEmpty
-            ? _calculateDistance(address["latitude"], address["longitude"], addresses[0]["latitude"], addresses[0]["longitude"])
-            : 0;
-        address["gScore"] = gScore;
-        address["hScore"] = hScore;
-        address["fScore"] = gScore + hScore;
-
-        newSet.add(address);
+        double distance = _calculateDistance(currentLat, currentLon, address['latitude'], address['longitude']);
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearest = address;
+        }
       }
 
-      // ✅ Re-sort priority queue based on fScores
-      openSet = PriorityQueue<Map<String, dynamic>>(
-          (a, b) => (a["fScore"] as double).compareTo(b["fScore"] as double));
-      openSet.addAll(newSet);
+      route.add(nearest);
+      currentLat = nearest['latitude'];
+      currentLon = nearest['longitude'];
+      addresses.remove(nearest);
     }
 
-    print("✅ Optimized Route Generated with ${optimizedRoute.length} stops.");
+    print("📦 Initial greedy route generated with ${route.length} stops.");
+    print("🔁 Running 2-Opt optimization...");
+    List<Map<String, dynamic>> optimizedRoute = _applyTwoOpt(route);
+    print("✅ Final optimized route ready.");
+
     return optimizedRoute;
   }
 }
