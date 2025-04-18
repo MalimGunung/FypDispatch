@@ -5,7 +5,8 @@ import 'package:geocoding/geocoding.dart';
 import 'optimized_delivery_screen.dart';
 import 'map_screen.dart';
 import 'package:image_picker/image_picker.dart';
-
+import 'package:geolocator/geolocator.dart'; // <-- Add this import
+import 'dart:math';
 
 class ParcelScanning extends StatefulWidget {
   @override
@@ -19,11 +20,33 @@ class _ParcelScanningState extends State<ParcelScanning> {
   bool isLoading = false;
   Set<String> selectedItems = {};
   bool selectionMode = false;
+  Position? currentPosition;
 
   @override
   void initState() {
     super.initState();
     fetchStoredAddresses();
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      currentPosition = await Geolocator.getCurrentPosition();
+      setState(() {});
+    } catch (e) {
+      print("❌ Error getting current location: $e");
+    }
+  }
+
+  // Copy of calculateDistance from optimized_delivery_screen.dart
+  double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const R = 6371; // Earth's radius in KM
+    double dLat = (lat2 - lat1) * 3.14159265359 / 180;
+    double dLon = (lon2 - lon1) * 3.14159265359 / 180;
+    double a =
+        (sin(dLat / 2) * sin(dLat / 2)) + cos(lat1 * 3.14159265359 / 180) * cos(lat2 * 3.14159265359 / 180) * sin(dLon / 2) * sin(dLon / 2);
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return R * c;
   }
 
   // ✅ Fetch stored addresses from Firebase
@@ -442,6 +465,16 @@ Future<void> scanParcel() async {
                         final id = addressList[index]["id"].toString();
                         final selected = selectedItems.contains(id);
 
+                        double? distance;
+                        if (currentPosition != null) {
+                          distance = calculateDistance(
+                            currentPosition!.latitude,
+                            currentPosition!.longitude,
+                            addressList[index]["latitude"],
+                            addressList[index]["longitude"],
+                          );
+                        }
+
                         return Dismissible(
                           key: Key(id),
                           direction: DismissDirection.endToStart,
@@ -530,14 +563,23 @@ Future<void> scanParcel() async {
                                 ),
                                 subtitle: Padding(
                                   padding: const EdgeInsets.only(top: 4.0),
-                                  child: Text(
-                                    "📍 Lat: ${addressList[index]["latitude"]}, Lon: ${addressList[index]["longitude"]}",
-                                    style: TextStyle(
-                                      color: Colors.blueGrey[700],
-                                      fontSize: 14,
-                                      fontFamily: 'Montserrat',
-                                    ),
-                                  ),
+                                  child: distance != null
+                                      ? Text(
+                                          "📏 Distance: ${distance.toStringAsFixed(2)} km",
+                                          style: TextStyle(
+                                            color: Colors.deepPurple,
+                                            fontSize: 14,
+                                            fontFamily: 'Montserrat',
+                                          ),
+                                        )
+                                      : Text(
+                                          "Distance: --",
+                                          style: TextStyle(
+                                            color: Colors.blueGrey[700],
+                                            fontSize: 14,
+                                            fontFamily: 'Montserrat',
+                                          ),
+                                        ),
                                 ),
                                 trailing: selectionMode
                                     ? Checkbox(
