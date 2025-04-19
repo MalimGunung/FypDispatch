@@ -37,11 +37,35 @@ class _MapScreenState extends State<MapScreen> {
   String googleApiKey = "AIzaSyCo0_suiw5NmUQf34lGAkfxlJdLvR01NvI";
   String estimatedTime = "Calculating..."; // ✅ Default ETA text
 
+  bool _userInteractingWithMap = false;
+  DateTime? _lastMapInteraction;
+  final Duration _interactionTimeout = Duration(seconds: 5);
+
   @override
   void initState() {
     super.initState();
     hasStartedDelivery = true; // Immediately set to true
     fetchDeliveryLocations(); // Auto-fetch without needing button
+    // Start a timer to check for interaction timeout
+    _startInteractionTimeoutChecker();
+  }
+
+  void _startInteractionTimeoutChecker() {
+    Future.doWhile(() async {
+      await Future.delayed(Duration(seconds: 1));
+      if (_userInteractingWithMap && _lastMapInteraction != null) {
+        if (DateTime.now().difference(_lastMapInteraction!) > _interactionTimeout) {
+          setState(() {
+            _userInteractingWithMap = false;
+          });
+          // Zoom to current location after timeout if position is available
+          if (currentPosition != null && mapController != null) {
+            animateToCurrentLocation(currentPosition!);
+          }
+        }
+      }
+      return mounted;
+    });
   }
 
   Future<void> fetchEstimatedTime(LatLng origin, LatLng destination) async {
@@ -161,12 +185,11 @@ class _MapScreenState extends State<MapScreen> {
         distanceFilter: 10,
       ),
     ).listen((Position position) {
-      // ✅ Zoom only once at the start to avoid map flickering
-      if (!hasAnimatedToLocation) {
+      // ✅ Zoom only if user is not interacting
+      if (!_userInteractingWithMap) {
         animateToCurrentLocation(position);
         hasAnimatedToLocation = true;
       }
-
       checkIfDispatcherArrived(position);
     });
   }
@@ -211,6 +234,19 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     currentPosition = position;
+
+    // Automatically zoom to current location when entering the page
+    if (mapController != null) {
+      animateToCurrentLocation(currentPosition!);
+    } else {
+      // If mapController is not yet ready, zoom after map is created
+      Future.delayed(Duration(milliseconds: 500), () {
+        if (mapController != null && currentPosition != null) {
+          animateToCurrentLocation(currentPosition!);
+        }
+      });
+    }
+
     List<Map<String, dynamic>> optimizedRoute =
         await optimizer.getOptimizedDeliverySequence();
 
@@ -510,22 +546,46 @@ class _MapScreenState extends State<MapScreen> {
                   borderRadius: BorderRadius.circular(24),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                    child: GoogleMap(
-                      initialCameraPosition: CameraPosition(
-                        target: LatLng(
-                          currentPosition?.latitude ?? 3.1390,
-                          currentPosition?.longitude ?? 101.6869,
-                        ),
-                        zoom: 12,
-                      ),
-                      markers: markers,
-                      polylines: polylines,
-                      myLocationEnabled: true,
-                      onMapCreated: (controller) {
+                    child: Listener(
+                      onPointerDown: (_) {
                         setState(() {
-                          mapController = controller;
+                          _userInteractingWithMap = true;
+                          _lastMapInteraction = DateTime.now();
                         });
                       },
+                      onPointerUp: (_) {
+                        setState(() {
+                          _lastMapInteraction = DateTime.now();
+                        });
+                      },
+                      child: GoogleMap(
+                        initialCameraPosition: CameraPosition(
+                          target: LatLng(
+                            currentPosition?.latitude ?? 3.1390,
+                            currentPosition?.longitude ?? 101.6869,
+                          ),
+                          zoom: 12,
+                        ),
+                        markers: markers,
+                        polylines: polylines,
+                        myLocationEnabled: true,
+                        onMapCreated: (controller) {
+                          setState(() {
+                            mapController = controller;
+                          });
+                        },
+                        onCameraMoveStarted: () {
+                          setState(() {
+                            _userInteractingWithMap = true;
+                            _lastMapInteraction = DateTime.now();
+                          });
+                        },
+                        onCameraIdle: () {
+                          setState(() {
+                            _lastMapInteraction = DateTime.now();
+                          });
+                        },
+                      ),
                     ),
                   ),
                 ),
