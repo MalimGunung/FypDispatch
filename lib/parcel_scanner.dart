@@ -350,6 +350,32 @@ Future<void> scanParcel() async {
     );
   }
 
+  // Add this method before the build method
+  Future<void> markDeliveriesComplete() async {
+    if (selectedItems.isEmpty) return;
+
+    try {
+      // Update status and move to history
+      await firebaseService.moveToHistory(selectedItems.toList());
+
+      // Clear selection and refresh list
+      setState(() {
+        selectedItems.clear();
+        selectionMode = false;
+      });
+      
+      fetchStoredAddresses();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("✅ Deliveries marked as completed")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("❌ Error marking deliveries as complete: $e")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final themeBlue = Colors.blueAccent.shade700;
@@ -420,6 +446,11 @@ Future<void> scanParcel() async {
                     });
                     fetchStoredAddresses();
                   },
+                ),
+                IconButton(
+                  icon: Icon(Icons.check_circle, color: Colors.green),
+                  tooltip: "Mark as Delivered",
+                  onPressed: () => markDeliveriesComplete(),
                 ),
                 IconButton(
                   icon: Icon(Icons.cancel, color: themeBlue),
