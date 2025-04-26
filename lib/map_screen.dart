@@ -162,6 +162,15 @@ class _MapScreenState extends State<MapScreen> {
         // ✅ All deliveries completed
         print("🎉 All deliveries completed!");
 
+        // --- START: Save to historical automatically ---
+        // Fetch all remaining parcels' IDs before deleting
+        List<Map<String, dynamic>> parcels = await firebaseService.getStoredAddresses();
+        List<String> parcelIds = parcels.map((e) => e['id'].toString()).toList();
+        if (parcelIds.isNotEmpty) {
+          await firebaseService.moveToHistory(parcelIds);
+        }
+        // --- END: Save to historical automatically ---
+
         // ✅ Delete all parcels from Firestore
         await firebaseService.deleteAllParcels();
 
