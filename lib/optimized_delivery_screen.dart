@@ -83,28 +83,76 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
     showDialog(
       context: context,
       builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: Text(
-            "Location Detail",
-            style: TextStyle(
-              color: Colors.blueAccent.shade700,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Montserrat',
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+          insetPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 32),
+          backgroundColor: Colors.transparent,
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFe0eafc), Color(0xFFcfdef3)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(26),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.blueAccent.withOpacity(0.13),
+                  blurRadius: 32,
+                  offset: Offset(0, 12),
+                ),
+              ],
             ),
-          ),
-          content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                GestureDetector(
-                  onTap: () => _showFullMapDialog(latitude, longitude),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                // Gradient header with icon and title
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.blueAccent.shade700, Colors.blueAccent.shade200],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+                  child: Row(
+                    children: [
+                      Icon(Icons.location_on_rounded, color: const Color.fromARGB(255, 131, 204, 217), size: 30),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          "Location Detail",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Montserrat',
+                            fontSize: 22,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Map preview with rounded corners
+                ClipRRect(
+                  borderRadius: BorderRadius.vertical(top: Radius.zero, bottom: Radius.circular(18)),
+                  child: GestureDetector(
+                    onTap: () => _showFullMapDialog(latitude, longitude),
                     child: Container(
                       width: double.infinity,
-                      height: 180,
+                      height: 170,
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: Colors.blueAccent.withOpacity(0.10),
+                            width: 1,
+                          ),
+                        ),
+                      ),
                       child: GoogleMap(
                         initialCameraPosition: CameraPosition(
                           target: LatLng(latitude, longitude),
@@ -124,62 +172,142 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                     ),
                   ),
                 ),
-                SizedBox(height: 16),
-                Text(
-                  delivery["address"],
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    fontFamily: 'Montserrat',
-                    color: Colors.blueGrey[900],
-                  ),
-                ),
-                SizedBox(height: 12),
-                Text(
-                  "Latitude: ${latitude.toStringAsFixed(2)}",
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.blueGrey[700],
-                    fontFamily: 'Montserrat',
-                  ),
-                ),
-                Text(
-                  "Longitude: ${longitude.toStringAsFixed(2)}",
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.blueGrey[700],
-                    fontFamily: 'Montserrat',
-                  ),
-                ),
-                if (distance != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Text(
-                      "Distance: ${distance.toStringAsFixed(2)} km",
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: Colors.deepPurple,
-                        fontFamily: 'Montserrat',
-                        fontWeight: FontWeight.w500,
+                // Details section
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        delivery["address"],
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          fontFamily: 'Montserrat',
+                          color: Colors.blueGrey[900],
+                        ),
                       ),
-                    ),
+                      SizedBox(height: 14),
+                      Divider(
+                        color: Colors.blueAccent.withOpacity(0.18),
+                        thickness: 1,
+                        height: 1,
+                      ),
+                      SizedBox(height: 14),
+                      Row(
+                        children: [
+                          Icon(Icons.my_location, color: Colors.blueAccent.shade200, size: 20),
+                          SizedBox(width: 6),
+                          Text(
+                            "Latitude:",
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: Colors.blueGrey[700],
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            "${latitude.toStringAsFixed(5)}",
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: Colors.blueGrey[900],
+                              fontFamily: 'Montserrat',
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(Icons.explore, color: Colors.blueAccent.shade200, size: 20),
+                          SizedBox(width: 6),
+                          Text(
+                            "Longitude:",
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: Colors.blueGrey[700],
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          SizedBox(width: 6),
+                          Text(
+                            "${longitude.toStringAsFixed(5)}",
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: Colors.blueGrey[900],
+                              fontFamily: 'Montserrat',
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (distance != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12.0),
+                          child: Row(
+                            children: [
+                              Icon(Icons.straighten, color: Colors.deepPurple, size: 20),
+                              SizedBox(width: 6),
+                              Text(
+                                "Distance:",
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.deepPurple,
+                                  fontFamily: 'Montserrat',
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              SizedBox(width: 6),
+                              Text(
+                                "${distance.toStringAsFixed(2)} km",
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.deepPurple,
+                                  fontFamily: 'Montserrat',
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
                   ),
+                ),
+                // Close button with themed style
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16, right: 18, left: 18, top: 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        icon: Icon(Icons.close_rounded, color: Colors.blueAccent.shade700),
+                        label: Text(
+                          "CLOSE",
+                          style: TextStyle(
+                            color: Colors.blueAccent.shade700,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Montserrat',
+                            fontSize: 16,
+                          ),
+                        ),
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.blueAccent.shade700,
+                          padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                          backgroundColor: Colors.blueAccent.withOpacity(0.07),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-          actions: [
-            TextButton(
-              child: Text(
-                "CLOSE",
-                style: TextStyle(
-                  color: Colors.blueAccent.shade700,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Montserrat',
-                ),
-              ),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
         );
       },
     );
