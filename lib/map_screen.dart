@@ -166,6 +166,12 @@ class _MapScreenState extends State<MapScreen> {
         // Fetch all remaining parcels' IDs before deleting
         List<Map<String, dynamic>> parcels = await firebaseService.getStoredAddresses();
         List<String> parcelIds = parcels.map((e) => e['id'].toString()).toList();
+
+        // Set delivery status as complete for all parcels
+        for (final id in parcelIds) {
+          await firebaseService.updateDeliveryStatus(id, "complete");
+        }
+
         if (parcelIds.isNotEmpty) {
           await firebaseService.moveToHistory(parcelIds);
         }

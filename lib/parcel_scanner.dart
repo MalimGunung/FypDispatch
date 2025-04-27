@@ -355,6 +355,11 @@ Future<void> scanParcel() async {
     if (selectedItems.isEmpty) return;
 
     try {
+      // Set delivery status as complete for all selected parcels
+      for (final id in selectedItems) {
+        await firebaseService.updateDeliveryStatus(id, "complete");
+      }
+
       // Update status and move to history
       await firebaseService.moveToHistory(selectedItems.toList());
 
