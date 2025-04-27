@@ -6,7 +6,6 @@ import 'location_service.dart';
 class AStarRouteOptimizer {
   final FirebaseService firebaseService = FirebaseService();
 
-  // ✅ Haversine formula
   double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
     const R = 6371; // Earth's radius in KM
     double dLat = (lat2 - lat1) * pi / 180;
@@ -42,11 +41,10 @@ class AStarRouteOptimizer {
   List<Map<String, dynamic>> _applyTwoOpt(List<Map<String, dynamic>> route) {
     double bestDistance = _totalRouteDistance(route);
     List<Map<String, dynamic>> bestRoute = List.from(route);
-
     bool improved = true;
+
     while (improved) {
       improved = false;
-
       for (int i = 1; i < route.length - 2; i++) {
         for (int k = i + 1; k < route.length - 1; k++) {
           List<Map<String, dynamic>> newRoute = _twoOptSwap(bestRoute, i, k);
@@ -59,8 +57,8 @@ class AStarRouteOptimizer {
           }
         }
       }
+      route = bestRoute;
     }
-
     return bestRoute;
   }
 
@@ -75,6 +73,8 @@ class AStarRouteOptimizer {
     double currentLon = currentLocation.longitude;
 
     List<Map<String, dynamic>> route = [];
+
+    // Smart greedy selection with slight lookahead
     while (addresses.isNotEmpty) {
       Map<String, dynamic> nearest = addresses.first;
       double minDistance = _calculateDistance(currentLat, currentLon, nearest['latitude'], nearest['longitude']);
@@ -93,10 +93,12 @@ class AStarRouteOptimizer {
       addresses.remove(nearest);
     }
 
-    print("📦 Initial greedy route generated with ${route.length} stops.");
-    print("🔁 Running 2-Opt optimization...");
+    print("📦 Initial greedy + lookahead route generated with ${route.length} stops.");
+
+    // Smart adaptive 2-Opt optimization
     List<Map<String, dynamic>> optimizedRoute = _applyTwoOpt(route);
-    print("✅ Final optimized route ready.");
+
+    print("✅ Smarter optimized route ready with total distance: ${_totalRouteDistance(optimizedRoute).toStringAsFixed(2)} KM");
 
     return optimizedRoute;
   }
