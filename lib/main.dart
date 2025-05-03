@@ -1,6 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'parcel_scanner.dart';
+import 'login_page.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // <-- Add this import
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,24 +32,26 @@ class MainApp extends StatelessWidget {
             fontFamily: 'Inter',
           ),
         ),
-        textTheme: TextTheme(
-          headlineMedium: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            color: Color(0xFF2C3E50),
-          ),
-          bodyLarge: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-            color: Color(0xFF34495E),
-          ),
-          bodyMedium: TextStyle(
-            fontSize: 14,
-            color: Color(0xFF7F8C8D),
-          ),
-        ),
       ),
-      home: HomeScreen(),
+      home: AuthGate(), // ✅ Add AuthGate to handle login state
+    );
+  }
+}
+
+class AuthGate extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Scaffold(body: Center(child: CircularProgressIndicator()));
+        } else if (snapshot.hasData) {
+          return HomeScreen(); // ✅ Logged in
+        } else {
+          return LoginPage(); // ❌ Not logged in
+        }
+      },
     );
   }
 }
@@ -72,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
             fontSize: 28,
             fontWeight: FontWeight.w800,
             color: Color(0xFF2C3E50), // Dark blue-grey color
-          ),
+          ),  
         ),
         actions: [
           if (selectedTabIndex == 0)

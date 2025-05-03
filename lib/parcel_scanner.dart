@@ -414,58 +414,91 @@ Future<void> scanParcel() async {
         iconTheme: IconThemeData(color: themeBlue),
         actions: selectionMode
             ? [
-                IconButton(
-                  tooltip: selectedItems.length < addressList.length
-                      ? "Select All"
-                      : "Deselect All",
-                  icon: Icon(
-                    selectedItems.length < addressList.length
-                        ? Icons.select_all
-                        : Icons.deselect,
-                    color: selectedItems.length < addressList.length
-                        ? Colors.green // green for select all
-                        : const Color.fromARGB(255, 18, 148, 22), // keep green for deselect all for consistency
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      if (selectedItems.length < addressList.length) {
-                        selectedItems = addressList
-                            .map((item) => item["id"].toString())
-                            .toSet();
-                      } else {
-                        selectedItems.clear();
-                      }
-                    });
-                  },
-                ),
-                IconButton(
-                  icon: Icon(Icons.delete, color: Colors.redAccent), // delete stays red
-                  tooltip: "Delete Selected",
-                  onPressed: () async {
-                    for (var id in selectedItems) {
-                      await firebaseService.deleteParcel(id);
+                PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert, color: themeBlue),
+                  tooltip: "Actions",
+                  onSelected: (value) async {
+                    switch (value) {
+                      case 'select_all':
+                        setState(() {
+                          selectedItems = addressList
+                              .map((item) => item["id"].toString())
+                              .toSet();
+                        });
+                        break;
+                      case 'deselect_all':
+                        setState(() {
+                          selectedItems.clear();
+                        });
+                        break;
+                      case 'delete':
+                        for (var id in selectedItems) {
+                          await firebaseService.deleteParcel(id);
+                        }
+                        setState(() {
+                          selectedItems.clear();
+                          selectionMode = false;
+                        });
+                        fetchStoredAddresses();
+                        break;
+                      case 'mark_complete':
+                        await markDeliveriesComplete();
+                        break;
+                      case 'cancel':
+                        setState(() {
+                          selectionMode = false;
+                          selectedItems.clear();
+                        });
+                        break;
                     }
-                    setState(() {
-                      selectedItems.clear();
-                      selectionMode = false;
-                    });
-                    fetchStoredAddresses();
                   },
-                ),
-                IconButton(
-                  icon: Icon(Icons.check_circle, color: Colors.green),
-                  tooltip: "Mark as Delivered",
-                  onPressed: () => markDeliveriesComplete(),
-                ),
-                IconButton(
-                  icon: Icon(Icons.cancel, color: themeBlue),
-                  tooltip: "Cancel Selection",
-                  onPressed: () {
-                    setState(() {
-                      selectionMode = false;
-                      selectedItems.clear();
-                    });
-                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem<String>(
+                      value: selectedItems.length < addressList.length ? 'select_all' : 'deselect_all',
+                      child: Row(
+                        children: [
+                          Icon(
+                            selectedItems.length < addressList.length
+                                ? Icons.select_all
+                                : Icons.deselect,
+                            color: Colors.green,
+                          ),
+                          SizedBox(width: 8),
+                          Text(selectedItems.length < addressList.length ? "Select All" : "Deselect All"),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, color: Colors.redAccent),
+                          SizedBox(width: 8),
+                          Text("Delete Selected"),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'mark_complete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green),
+                          SizedBox(width: 8),
+                          Text("Mark as Complete"),
+                        ],
+                      ),
+                    ),
+                    PopupMenuItem<String>(
+                      value: 'cancel',
+                      child: Row(
+                        children: [
+                          Icon(Icons.cancel, color: themeBlue),
+                          SizedBox(width: 8),
+                          Text("Cancel Selection"),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ]
             : [],

@@ -18,6 +18,8 @@ dependencies:
   reorderables: ^0.6.0
   confetti: ^0.8.0
   flutter_bloc: ^9.1.0
+  firebase_auth: ^5.5.3
+  google_sign_in: ^6.3.0
 
 
 dev_dependencies:
