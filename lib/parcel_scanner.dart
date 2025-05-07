@@ -9,6 +9,9 @@ import 'package:geolocator/geolocator.dart'; // <-- Add this import
 import 'dart:math';
 
 class ParcelScanning extends StatefulWidget {
+  final String userEmail;
+  ParcelScanning({Key? key, required this.userEmail}) : super(key: key);
+
   @override
   _ParcelScanningState createState() => _ParcelScanningState();
 }
@@ -21,7 +24,6 @@ class _ParcelScanningState extends State<ParcelScanning> {
   Set<String> selectedItems = {};
   bool selectionMode = false;
   Position? currentPosition;
-  final String userId = "currentUser123"; // Placeholder: Replace with actual user ID logic
 
   @override
   void initState() {
@@ -54,7 +56,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
   Future<void> fetchStoredAddresses() async {
     setState(() => isLoading = true);
     List<Map<String, dynamic>> storedAddresses =
-        await firebaseService.getStoredAddresses(userId);
+        await firebaseService.getStoredAddresses(widget.userEmail);
     setState(() {
       addressList = storedAddresses;
       isLoading = false;
@@ -97,7 +99,7 @@ Future<void> scanParcel() async {
     print("📍 Latitude: $latitude, Longitude: $longitude");
 
     await firebaseService.saveParcelData(
-      userId,
+      widget.userEmail,
       address,
       latitude,
       longitude,
@@ -130,7 +132,7 @@ Future<void> scanParcel() async {
 
   // ✅ Delete an address
   Future<void> deleteAddress(String documentId) async {
-    await firebaseService.deleteParcel(userId, documentId);
+    await firebaseService.deleteParcel(widget.userEmail, documentId);
     fetchStoredAddresses(); // Refresh UI
   }
 
@@ -316,7 +318,7 @@ Future<void> scanParcel() async {
                                 var coordinates = await getCoordinates(newAddress);
                                 if (coordinates != null) {
                                   await firebaseService.updateParcel(
-                                    userId,
+                                    widget.userEmail,
                                     documentId,
                                     newAddress,
                                     coordinates["latitude"]!,
@@ -353,18 +355,17 @@ Future<void> scanParcel() async {
     );
   }
 
-  // Add this method before the build method
   Future<void> markDeliveriesComplete() async {
     if (selectedItems.isEmpty) return;
 
     try {
       // Set delivery status as complete for all selected parcels
       for (final id in selectedItems) {
-        await firebaseService.updateDeliveryStatus(userId, id, "complete");
+        await firebaseService.updateDeliveryStatus(widget.userEmail, id, "complete");
       }
 
       // Update status and move to history
-      await firebaseService.moveToHistory(userId, selectedItems.toList());
+      await firebaseService.moveToHistory(widget.userEmail, selectedItems.toList());
 
       // Clear selection and refresh list
       setState(() {
@@ -436,7 +437,7 @@ Future<void> scanParcel() async {
                         break;
                       case 'delete':
                         for (var id in selectedItems) {
-                          await firebaseService.deleteParcel(userId, id);
+                          await firebaseService.deleteParcel(widget.userEmail, id);
                         }
                         setState(() {
                           selectedItems.clear();
@@ -714,14 +715,14 @@ Future<void> scanParcel() async {
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => OptimizedDeliveryScreen()));
+                        builder: (context) => OptimizedDeliveryScreen(userEmail: widget.userEmail)));
                 break;
               case 1:
                 scanParcel();
                 break;
               case 2:
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => MapScreen()));
+                    MaterialPageRoute(builder: (context) => MapScreen(userEmail: widget.userEmail)));
                 break;
             }
           },

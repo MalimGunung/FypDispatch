@@ -158,10 +158,17 @@ class _HomeScreenState extends State<HomeScreen> {
         onTapUp: (_) => setState(() => _isButtonPressed = false),
         onTapCancel: () => setState(() => _isButtonPressed = false),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => ParcelScanning()),
-          );
+          final userEmail = FirebaseAuth.instance.currentUser?.email;
+          if (userEmail != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ParcelScanning(userEmail: userEmail)),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("User email not found. Please re-login.")),
+            );
+          }
         },
         child: MouseRegion(
           cursor: SystemMouseCursors.click,

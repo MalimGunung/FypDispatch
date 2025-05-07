@@ -6,6 +6,9 @@ import 'dart:math';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class OptimizedDeliveryScreen extends StatefulWidget {
+  final String userEmail;
+  OptimizedDeliveryScreen({Key? key, required this.userEmail}) : super(key: key);
+
   @override
   _OptimizedDeliveryScreenState createState() => _OptimizedDeliveryScreenState();
 }
@@ -15,7 +18,6 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
   bool isLoading = true;
   final AStarRouteOptimizer optimizer = AStarRouteOptimizer();
   Position? currentPosition;
-  final String userId = "currentUser123"; // Placeholder: Replace with actual user ID logic
 
   @override
   void initState() {
@@ -26,7 +28,7 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
   Future<void> fetchDeliveryList() async {
     try {
       currentPosition = await Geolocator.getCurrentPosition();
-      List<Map<String, dynamic>> route = await optimizer.getOptimizedDeliverySequence(userId);
+      List<Map<String, dynamic>> route = await optimizer.getOptimizedDeliverySequence(widget.userEmail);
       setState(() {
         deliveryList = route;
         isLoading = false;
@@ -514,7 +516,7 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => MapScreen()),
+                        MaterialPageRoute(builder: (context) => MapScreen(userEmail: widget.userEmail)),
                       );
                     },
                     style: ElevatedButton.styleFrom(
