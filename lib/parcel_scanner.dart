@@ -21,6 +21,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
   Set<String> selectedItems = {};
   bool selectionMode = false;
   Position? currentPosition;
+  final String userId = "currentUser123"; // Placeholder: Replace with actual user ID logic
 
   @override
   void initState() {
@@ -53,7 +54,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
   Future<void> fetchStoredAddresses() async {
     setState(() => isLoading = true);
     List<Map<String, dynamic>> storedAddresses =
-        await firebaseService.getStoredAddresses();
+        await firebaseService.getStoredAddresses(userId);
     setState(() {
       addressList = storedAddresses;
       isLoading = false;
@@ -96,6 +97,7 @@ Future<void> scanParcel() async {
     print("📍 Latitude: $latitude, Longitude: $longitude");
 
     await firebaseService.saveParcelData(
+      userId,
       address,
       latitude,
       longitude,
@@ -128,7 +130,7 @@ Future<void> scanParcel() async {
 
   // ✅ Delete an address
   Future<void> deleteAddress(String documentId) async {
-    await firebaseService.deleteParcel(documentId);
+    await firebaseService.deleteParcel(userId, documentId);
     fetchStoredAddresses(); // Refresh UI
   }
 
@@ -314,6 +316,7 @@ Future<void> scanParcel() async {
                                 var coordinates = await getCoordinates(newAddress);
                                 if (coordinates != null) {
                                   await firebaseService.updateParcel(
+                                    userId,
                                     documentId,
                                     newAddress,
                                     coordinates["latitude"]!,
@@ -357,11 +360,11 @@ Future<void> scanParcel() async {
     try {
       // Set delivery status as complete for all selected parcels
       for (final id in selectedItems) {
-        await firebaseService.updateDeliveryStatus(id, "complete");
+        await firebaseService.updateDeliveryStatus(userId, id, "complete");
       }
 
       // Update status and move to history
-      await firebaseService.moveToHistory(selectedItems.toList());
+      await firebaseService.moveToHistory(userId, selectedItems.toList());
 
       // Clear selection and refresh list
       setState(() {
@@ -433,7 +436,7 @@ Future<void> scanParcel() async {
                         break;
                       case 'delete':
                         for (var id in selectedItems) {
-                          await firebaseService.deleteParcel(id);
+                          await firebaseService.deleteParcel(userId, id);
                         }
                         setState(() {
                           selectedItems.clear();

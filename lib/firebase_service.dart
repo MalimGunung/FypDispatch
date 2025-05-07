@@ -1,40 +1,39 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-
 class FirebaseService {
   final FirebaseFirestore firestore = FirebaseFirestore.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Add delivery status to parcel data
-  Future<void> saveParcelData(String address, double latitude, double longitude) async {
+  Future<void> saveParcelData(String userId, String address, double latitude, double longitude) async {
     try {
-      await firestore.collection("parcels").add({
+      await firestore.collection("dispatcher").doc(userId).collection("parcels").add({
         "address": address.trim(),
         "latitude": latitude,
         "longitude": longitude,
         "timestamp": FieldValue.serverTimestamp(),
         "status": "pending", // Add status field
       });
-      print("✅ Parcel saved: $address | Lat: $latitude | Lon: $longitude");
+      print("✅ Parcel saved for user $userId: $address | Lat: $latitude | Lon: $longitude");
     } catch (e) {
-      print("❌ Error saving parcel to Firestore: $e");
+      print("❌ Error saving parcel to Firestore for user $userId: $e");
     }
   }
 
   // Update delivery status
-  Future<void> updateDeliveryStatus(String documentId, String status) async {
+  Future<void> updateDeliveryStatus(String userId, String documentId, String status) async {
     try {
-      await firestore.collection("parcels").doc(documentId).update({
+      await firestore.collection("dispatcher").doc(userId).collection("parcels").doc(documentId).update({
         "status": status,
       });
-      print("✅ Delivery status updated for: $documentId");
+      print("✅ Delivery status updated for user $userId, doc: $documentId");
     } catch (e) {
-      print("❌ Error updating delivery status: $e");
+      print("❌ Error updating delivery status for user $userId: $e");
     }
   }
 
   // Move completed deliveries to historical data
-  Future<void> moveToHistory(List<String> documentIds) async {
+  Future<void> moveToHistory(String userId, List<String> documentIds) async {
     try {
       // Get today's date in YYYY-MM-DD format
       String today = DateTime.now().toIso8601String().split('T')[0];
@@ -44,11 +43,13 @@ class FirebaseService {
       
       // Get all parcels that need to be moved
       for (String docId in documentIds) {
-        DocumentSnapshot parcel = await firestore.collection("parcels").doc(docId).get();
+        DocumentSnapshot parcel = await firestore.collection("dispatcher").doc(userId).collection("parcels").doc(docId).get();
         Map<String, dynamic> data = parcel.data() as Map<String, dynamic>;
         
         // Create historical record
         DocumentReference historyRef = firestore
+            .collection("dispatcher")
+            .doc(userId)
             .collection("delivery_history")
             .doc(today)
             .collection("deliveries")
@@ -60,21 +61,23 @@ class FirebaseService {
         });
         
         // Delete from active parcels
-        batch.delete(firestore.collection("parcels").doc(docId));
+        batch.delete(firestore.collection("dispatcher").doc(userId).collection("parcels").doc(docId));
       }
       
       await batch.commit();
-      print("✅ Moved ${documentIds.length} deliveries to history");
+      print("✅ Moved ${documentIds.length} deliveries to history for user $userId");
     } catch (e) {
-      print("❌ Error moving to history: $e");
+      print("❌ Error moving to history for user $userId: $e");
     }
   }
 
   // Get historical delivery data for a specific date
-  Future<List<Map<String, dynamic>>> getHistoricalDeliveries(String date) async {
+  Future<List<Map<String, dynamic>>> getHistoricalDeliveries(String userId, String date) async {
     List<Map<String, dynamic>> deliveries = [];
     try {
       QuerySnapshot snapshot = await firestore
+          .collection("dispatcher")
+          .doc(userId)
           .collection("delivery_history")
           .doc(date)
           .collection("deliveries")
@@ -88,18 +91,18 @@ class FirebaseService {
         });
       }
     } catch (e) {
-      print("❌ Error fetching historical deliveries: $e");
+      print("❌ Error fetching historical deliveries for user $userId: $e");
     }
     return deliveries;
   }
 
   // ✅ Fetch stored addresses from Firebase
-  Future<List<Map<String, dynamic>>> getStoredAddresses() async {
+  Future<List<Map<String, dynamic>>> getStoredAddresses(String userId) async {
     List<Map<String, dynamic>> addressList = [];
     try {
-      QuerySnapshot snapshot = await firestore.collection("parcels").get();
+      QuerySnapshot snapshot = await firestore.collection("dispatcher").doc(userId).collection("parcels").get();
 
-      print("📥 Total documents fetched from Firebase: ${snapshot.docs.length}");
+      print("📥 Total documents fetched from Firebase for user $userId: ${snapshot.docs.length}");
 
       for (var doc in snapshot.docs) {
         var data = doc.data() as Map<String, dynamic>;
@@ -119,45 +122,46 @@ class FirebaseService {
       }
 
       if (addressList.isEmpty) {
-        print("❌ No valid addresses found in Firestore.");
+        print("❌ No valid addresses found in Firestore for user $userId.");
       }
     } catch (e) {
-      print("❌ Error fetching addresses from Firestore: $e");
+      print("❌ Error fetching addresses from Firestore for user $userId: $e");
     }
 
     return addressList;
   }
 
   // ✅ Delete address from Firestore
-  Future<void> deleteParcel(String documentId) async {
+  Future<void> deleteParcel(String userId, String documentId) async {
     try {
-      await firestore.collection("parcels").doc(documentId).delete();
-      print("🗑️ Parcel deleted: $documentId");
+      await firestore.collection("dispatcher").doc(userId).collection("parcels").doc(documentId).delete();
+      print("🗑️ Parcel deleted for user $userId: $documentId");
     } catch (e) {
-      print("❌ Error deleting parcel: $e");
+      print("❌ Error deleting parcel for user $userId: $e");
     }
   }
 
   // ✅ Update address in Firestore
-  Future<void> updateParcel(String documentId, String newAddress, double newLatitude, double newLongitude) async {
+  Future<void> updateParcel(String userId, String documentId, String newAddress, double newLatitude, double newLongitude) async {
     try {
-      await firestore.collection("parcels").doc(documentId).update({
+      await firestore.collection("dispatcher").doc(userId).collection("parcels").doc(documentId).update({
         "address": newAddress.trim(),
         "latitude": newLatitude,
         "longitude": newLongitude,
       });
-      print("✏️ Parcel updated: $documentId");
+      print("✏️ Parcel updated for user $userId: $documentId");
     } catch (e) {
-      print("❌ Error updating parcel: $e");
+      print("❌ Error updating parcel for user $userId: $e");
     }
   }
 
   // ✅ Add this method to delete all parcels
-  Future<void> deleteAllParcels() async {
-    final snapshot = await _firestore.collection('parcels').get();
+  Future<void> deleteAllParcels(String userId) async {
+    final snapshot = await _firestore.collection('dispatcher').doc(userId).collection('parcels').get();
     for (var doc in snapshot.docs) {
-      await _firestore.collection('parcels').doc(doc.id).delete();
+      await _firestore.collection('dispatcher').doc(userId).collection('parcels').doc(doc.id).delete();
     }
+    print("🗑️ All parcels deleted for user $userId");
   }
 
 }

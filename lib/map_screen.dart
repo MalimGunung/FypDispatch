@@ -32,6 +32,7 @@ class _MapScreenState extends State<MapScreen> {
   Set<Marker> markers = {};
   Set<Polyline> polylines = {};
   Position? currentPosition;
+  final String userId = "currentUser123"; // Placeholder: Replace with actual user ID logic
 
   // ✅ Replace with your valid Google API Key
   String googleApiKey = "AIzaSyCo0_suiw5NmUQf34lGAkfxlJdLvR01NvI";
@@ -164,21 +165,21 @@ class _MapScreenState extends State<MapScreen> {
 
         // --- START: Save to historical automatically ---
         // Fetch all remaining parcels' IDs before deleting
-        List<Map<String, dynamic>> parcels = await firebaseService.getStoredAddresses();
+        List<Map<String, dynamic>> parcels = await firebaseService.getStoredAddresses(userId);
         List<String> parcelIds = parcels.map((e) => e['id'].toString()).toList();
 
         // Set delivery status as complete for all parcels
         for (final id in parcelIds) {
-          await firebaseService.updateDeliveryStatus(id, "complete");
+          await firebaseService.updateDeliveryStatus(userId, id, "complete");
         }
 
         if (parcelIds.isNotEmpty) {
-          await firebaseService.moveToHistory(parcelIds);
+          await firebaseService.moveToHistory(userId, parcelIds);
         }
         // --- END: Save to historical automatically ---
 
         // ✅ Delete all parcels from Firestore
-        await firebaseService.deleteAllParcels();
+        await firebaseService.deleteAllParcels(userId);
 
         // ✅ Navigate to confirmation screen (animated)
         if (context.mounted) {
@@ -263,7 +264,7 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     List<Map<String, dynamic>> optimizedRoute =
-        await optimizer.getOptimizedDeliverySequence();
+        await optimizer.getOptimizedDeliverySequence(userId);
 
     if (optimizedRoute.isNotEmpty) {
       setState(() {

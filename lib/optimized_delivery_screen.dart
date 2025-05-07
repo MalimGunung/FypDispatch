@@ -15,6 +15,7 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
   bool isLoading = true;
   final AStarRouteOptimizer optimizer = AStarRouteOptimizer();
   Position? currentPosition;
+  final String userId = "currentUser123"; // Placeholder: Replace with actual user ID logic
 
   @override
   void initState() {
@@ -25,7 +26,7 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
   Future<void> fetchDeliveryList() async {
     try {
       currentPosition = await Geolocator.getCurrentPosition();
-      List<Map<String, dynamic>> route = await optimizer.getOptimizedDeliverySequence();
+      List<Map<String, dynamic>> route = await optimizer.getOptimizedDeliverySequence(userId);
       setState(() {
         deliveryList = route;
         isLoading = false;

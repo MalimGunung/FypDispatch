@@ -62,8 +62,8 @@ class AStarRouteOptimizer {
     return bestRoute;
   }
 
-  Future<List<Map<String, dynamic>>> getOptimizedDeliverySequence() async {
-    List<Map<String, dynamic>> addresses = await firebaseService.getStoredAddresses();
+  Future<List<Map<String, dynamic>>> getOptimizedDeliverySequence(String userId) async {
+    List<Map<String, dynamic>> addresses = await firebaseService.getStoredAddresses(userId);
     if (addresses.isEmpty) return [];
 
     Position? currentLocation = await LocationService.getCurrentLocation();
