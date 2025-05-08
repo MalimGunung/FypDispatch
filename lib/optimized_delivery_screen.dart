@@ -4,6 +4,8 @@ import 'map_screen.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:math';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class OptimizedDeliveryScreen extends StatefulWidget {
   final String userEmail;
@@ -18,6 +20,7 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
   bool isLoading = true;
   final AStarRouteOptimizer optimizer = AStarRouteOptimizer();
   Position? currentPosition;
+  List<double?> orsDistances = []; // Store ORS distances for each delivery
 
   @override
   void initState() {
@@ -29,8 +32,21 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
     try {
       currentPosition = await Geolocator.getCurrentPosition();
       List<Map<String, dynamic>> route = await optimizer.getOptimizedDeliverySequence(widget.userEmail);
+      List<double?> distances = [];
+      if (currentPosition != null) {
+        for (final delivery in route) {
+          double? dist = await _getORSRoadDistance(
+            currentPosition!.latitude,
+            currentPosition!.longitude,
+            delivery['latitude'],
+            delivery['longitude'],
+          );
+          distances.add(dist);
+        }
+      }
       setState(() {
         deliveryList = route;
+        orsDistances = distances;
         isLoading = false;
       });
     } catch (e) {
@@ -41,14 +57,23 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
     }
   }
 
-  double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const R = 6371; // Earth's radius in KM
-    double dLat = (lat2 - lat1) * 3.14159265359 / 180;
-    double dLon = (lon2 - lon1) * 3.14159265359 / 180;
-    double a =
-        (sin(dLat / 2) * sin(dLat / 2)) + cos(lat1 * 3.14159265359 / 180) * cos(lat2 * 3.14159265359 / 180) * sin(dLon / 2) * sin(dLon / 2);
-    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    return R * c;
+  Future<double?> _getORSRoadDistance(double lat1, double lon1, double lat2, double lon2) async {
+    const String _orsApiKey = '5b3ce3597851110001cf6248c4f4ec157fda4aa7a289bd1c8e4ef93f';
+    final url =
+        'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$_orsApiKey&start=$lon1,$lat1&end=$lon2,$lat2';
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final distanceMeters = data['features'][0]['properties']['segments'][0]['distance'];
+        return distanceMeters / 1000.0; // return in KM
+      } else {
+        print("❌ ORS API Error: ${response.body}");
+      }
+    } catch (e) {
+      print("❌ ORS Request Error: $e");
+    }
+    return null;
   }
 
   void _showFullMapDialog(double latitude, double longitude) {
@@ -408,15 +433,7 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                             itemCount: deliveryList.length,
                             itemBuilder: (context, index) {
                               final delivery = deliveryList[index];
-                              double? distance;
-                              if (currentPosition != null) {
-                                distance = calculateDistance(
-                                  currentPosition!.latitude,
-                                  currentPosition!.longitude,
-                                  delivery['latitude'],
-                                  delivery['longitude'],
-                                );
-                              }
+                              double? distance = (orsDistances.length > index) ? orsDistances[index] : null;
                               return Container(
                                 margin: EdgeInsets.symmetric(vertical: 8),
                                 decoration: BoxDecoration(

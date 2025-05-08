@@ -7,6 +7,8 @@ import 'map_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart'; // <-- Add this import
 import 'dart:math';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class ParcelScanning extends StatefulWidget {
   final String userEmail;
@@ -24,6 +26,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
   Set<String> selectedItems = {};
   bool selectionMode = false;
   Position? currentPosition;
+  List<double?> orsDistances = []; // Store ORS distances for each address
 
   @override
   void initState() {
@@ -36,20 +39,55 @@ class _ParcelScanningState extends State<ParcelScanning> {
     try {
       currentPosition = await Geolocator.getCurrentPosition();
       setState(() {});
+      // After getting location, update distances if addresses are loaded
+      if (addressList.isNotEmpty) {
+        await _updateORSDistances();
+      }
     } catch (e) {
       print("❌ Error getting current location: $e");
     }
   }
 
-  // Copy of calculateDistance from optimized_delivery_screen.dart
-  double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
-    const R = 6371; // Earth's radius in KM
-    double dLat = (lat2 - lat1) * 3.14159265359 / 180;
-    double dLon = (lon2 - lon1) * 3.14159265359 / 180;
-    double a =
-        (sin(dLat / 2) * sin(dLat / 2)) + cos(lat1 * 3.14159265359 / 180) * cos(lat2 * 3.14159265359 / 180) * sin(dLon / 2) * sin(dLon / 2);
-    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    return R * c;
+  // Remove the old calculateDistance method (Haversine)
+  Future<double?> _getORSRoadDistance(double lat1, double lon1, double lat2, double lon2) async {
+    const String _orsApiKey = '5b3ce3597851110001cf6248c4f4ec157fda4aa7a289bd1c8e4ef93f';
+    final url =
+        'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$_orsApiKey&start=$lon1,$lat1&end=$lon2,$lat2';
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final distanceMeters = data['features'][0]['properties']['segments'][0]['distance'];
+        return distanceMeters / 1000.0; // return in KM
+      } else {
+        print("❌ ORS API Error: ${response.body}");
+      }
+    } catch (e) {
+      print("❌ ORS Request Error: $e");
+    }
+    return null;
+  }
+
+  Future<void> _updateORSDistances() async {
+    if (currentPosition == null || addressList.isEmpty) {
+      setState(() {
+        orsDistances = List.filled(addressList.length, null);
+      });
+      return;
+    }
+    List<double?> distances = [];
+    for (final address in addressList) {
+      double? dist = await _getORSRoadDistance(
+        currentPosition!.latitude,
+        currentPosition!.longitude,
+        address["latitude"],
+        address["longitude"],
+      );
+      distances.add(dist);
+    }
+    setState(() {
+      orsDistances = distances;
+    });
   }
 
   // ✅ Fetch stored addresses from Firebase
@@ -61,6 +99,10 @@ class _ParcelScanningState extends State<ParcelScanning> {
       addressList = storedAddresses;
       isLoading = false;
     });
+    // After fetching addresses, update ORS distances if location is available
+    if (currentPosition != null && addressList.isNotEmpty) {
+      await _updateORSDistances();
+    }
   }
 
   // ✅ Capture and scan an address from an image
@@ -538,15 +580,7 @@ Future<void> scanParcel() async {
                         final id = addressList[index]["id"].toString();
                         final selected = selectedItems.contains(id);
 
-                        double? distance;
-                        if (currentPosition != null) {
-                          distance = calculateDistance(
-                            currentPosition!.latitude,
-                            currentPosition!.longitude,
-                            addressList[index]["latitude"],
-                            addressList[index]["longitude"],
-                          );
-                        }
+                        double? distance = (orsDistances.length > index) ? orsDistances[index] : null;
 
                         return Dismissible(
                           key: Key(id),
@@ -731,3 +765,4 @@ Future<void> scanParcel() async {
     );
   }
 }
+
