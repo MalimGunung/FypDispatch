@@ -57,7 +57,8 @@ class _MapScreenState extends State<MapScreen> {
     Future.doWhile(() async {
       await Future.delayed(Duration(seconds: 1));
       if (_userInteractingWithMap && _lastMapInteraction != null) {
-        if (DateTime.now().difference(_lastMapInteraction!) > _interactionTimeout) {
+        if (DateTime.now().difference(_lastMapInteraction!) >
+            _interactionTimeout) {
           setState(() {
             _userInteractingWithMap = false;
           });
@@ -69,6 +70,58 @@ class _MapScreenState extends State<MapScreen> {
       }
       return mounted;
     });
+  }
+
+  // ✅ Draw route using OpenRouteService API
+  Future<void> drawORSRoute() async {
+    if (currentPosition == null || deliveryPoints.isEmpty) return;
+
+    final String apiKey =
+        '5b3ce3597851110001cf6248c4f4ec157fda4aa7a289bd1c8e4ef93f';
+
+    final coordinates = [
+      [currentPosition!.longitude, currentPosition!.latitude],
+      ...deliveryPoints.map((p) => [p.longitude, p.latitude])
+    ];
+
+    final body = json.encode({
+      "coordinates": coordinates,
+      "instructions": false,
+      "format": "geojson"
+    });
+
+    final response = await http.post(
+      Uri.parse(
+          'https://api.openrouteservice.org/v2/directions/driving-car/geojson'),
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: body,
+    );
+
+    if (response.statusCode == 200) {
+      final geoJson = json.decode(response.body);
+      final coords = geoJson['features'][0]['geometry']['coordinates'];
+
+      List<LatLng> polylinePoints = coords.map<LatLng>((point) {
+        return LatLng(point[1], point[0]); // [lon, lat] to LatLng
+      }).toList();
+
+      setState(() {
+        polylines.clear();
+        polylines.add(Polyline(
+          polylineId: PolylineId("ors_route"),
+          color: Colors.blueAccent,
+          width: 5,
+          points: polylinePoints,
+        ));
+      });
+
+      print("✅ ORS route drawn with ${polylinePoints.length} points.");
+    } else {
+      print("❌ ORS API Error: ${response.body}");
+    }
   }
 
   Future<void> fetchEstimatedTime(LatLng origin, LatLng destination) async {
@@ -167,12 +220,15 @@ class _MapScreenState extends State<MapScreen> {
 
         // --- START: Save to historical automatically ---
         // Fetch all remaining parcels' IDs before deleting
-        List<Map<String, dynamic>> parcels = await firebaseService.getStoredAddresses(widget.userEmail);
-        List<String> parcelIds = parcels.map((e) => e['id'].toString()).toList();
+        List<Map<String, dynamic>> parcels =
+            await firebaseService.getStoredAddresses(widget.userEmail);
+        List<String> parcelIds =
+            parcels.map((e) => e['id'].toString()).toList();
 
         // Set delivery status as complete for all parcels
         for (final id in parcelIds) {
-          await firebaseService.updateDeliveryStatus(widget.userEmail, id, "complete");
+          await firebaseService.updateDeliveryStatus(
+              widget.userEmail, id, "complete");
         }
 
         if (parcelIds.isNotEmpty) {
@@ -307,7 +363,7 @@ class _MapScreenState extends State<MapScreen> {
         }
       });
 
-      getRouteFromGoogleMaps(); // ✅ Call this to draw the polyline
+      drawORSRoute(); // ✅ Call this to draw the polyline
 
       // ✅ Start tracking dispatcher location for automation
       startTrackingDispatcher();
@@ -446,7 +502,8 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   // Helper to generate numbered marker icon
-  Future<BitmapDescriptor> createNumberedMarker(int number, {Color color = Colors.red}) async {
+  Future<BitmapDescriptor> createNumberedMarker(int number,
+      {Color color = Colors.red}) async {
     final int size = 100;
     final ui.PictureRecorder recorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(recorder);
@@ -516,7 +573,8 @@ class _MapScreenState extends State<MapScreen> {
             onPressed: () => Navigator.of(context).pop(false),
             style: TextButton.styleFrom(
               foregroundColor: Colors.blueAccent.shade700,
-              textStyle: TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w600),
+              textStyle: TextStyle(
+                  fontFamily: 'Montserrat', fontWeight: FontWeight.w600),
             ),
             child: Text("Cancel"),
           ),
@@ -528,7 +586,8 @@ class _MapScreenState extends State<MapScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              textStyle: TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.bold),
+              textStyle: TextStyle(
+                  fontFamily: 'Montserrat', fontWeight: FontWeight.bold),
               elevation: 2,
             ),
             child: Padding(
@@ -553,7 +612,8 @@ class _MapScreenState extends State<MapScreen> {
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_new_rounded, color: const Color.fromARGB(255, 7, 7, 7)),
+            icon: Icon(Icons.arrow_back_ios_new_rounded,
+                color: const Color.fromARGB(255, 7, 7, 7)),
             onPressed: () async {
               if (await _onWillPop()) {
                 Navigator.pop(context);
@@ -597,7 +657,8 @@ class _MapScreenState extends State<MapScreen> {
                     padding: EdgeInsets.all(18),
                     child: Row(
                       children: [
-                        Icon(Icons.timer, color: Colors.blueAccent.shade700, size: 28),
+                        Icon(Icons.timer,
+                            color: Colors.blueAccent.shade700, size: 28),
                         SizedBox(width: 10),
                         Expanded(
                           child: Text(
@@ -684,7 +745,8 @@ class _MapScreenState extends State<MapScreen> {
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.97),
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                      borderRadius:
+                          BorderRadius.vertical(top: Radius.circular(24)),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.blueAccent.withOpacity(0.10),
@@ -713,23 +775,28 @@ class _MapScreenState extends State<MapScreen> {
                               setState(() {
                                 if (newIndex > oldIndex) newIndex -= 1;
                                 final item = deliveryPoints.removeAt(oldIndex);
-                                final address = deliveryAddresses.removeAt(oldIndex);
-                                final status = deliveryStatus.removeAt(oldIndex);
+                                final address =
+                                    deliveryAddresses.removeAt(oldIndex);
+                                final status =
+                                    deliveryStatus.removeAt(oldIndex);
 
                                 deliveryPoints.insert(newIndex, item);
                                 deliveryAddresses.insert(newIndex, address);
                                 deliveryStatus.insert(newIndex, status);
                               });
                             },
-                            children: List.generate(deliveryPoints.length, (index) {
+                            children:
+                                List.generate(deliveryPoints.length, (index) {
                               return Card(
                                 key: ValueKey(deliveryPoints[index]),
-                                margin: EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                                margin: EdgeInsets.symmetric(
+                                    horizontal: 18, vertical: 8),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 elevation: 4,
-                                shadowColor: Colors.blueAccent.withOpacity(0.10),
+                                shadowColor:
+                                    Colors.blueAccent.withOpacity(0.10),
                                 child: ListTile(
                                   leading: Container(
                                     width: 44,
@@ -768,7 +835,8 @@ class _MapScreenState extends State<MapScreen> {
                                     ),
                                   ),
                                   trailing: IconButton(
-                                    icon: Icon(Icons.delete, color: Colors.red[400]),
+                                    icon: Icon(Icons.delete,
+                                        color: Colors.red[400]),
                                     onPressed: () => _deleteStop(index),
                                   ),
                                 ),
