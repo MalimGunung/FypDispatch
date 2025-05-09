@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'parcel_scanner.dart';
 import 'login_page.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // <-- Add this import
+import 'firebase_service.dart'; // <-- Add this import
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,6 +63,41 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  final FirebaseService firebaseService = FirebaseService();
+  Map<String, dynamic>? routeSummary;
+  List<Map<String, dynamic>> allRoutes = []; // Store all delivery summaries
+  String selectedFilter = "All"; // Default filter
+  bool isAscending = true; // Sorting order
+
+  @override
+  void initState() {
+    super.initState();
+    fetchRouteSummary();
+    fetchAllRoutes();
+  }
+
+  Future<void> fetchRouteSummary() async {
+    try {
+      final summary = await firebaseService.getRouteSummary(FirebaseAuth.instance.currentUser?.email);
+      setState(() {
+        routeSummary = summary;
+      });
+    } catch (e) {
+      print("❌ Error fetching route summary: $e");
+    }
+  }
+
+  Future<void> fetchAllRoutes() async {
+    try {
+      final routes = await firebaseService.getAllRoutes(FirebaseAuth.instance.currentUser?.email);
+      setState(() {
+        allRoutes = routes;
+      });
+    } catch (e) {
+      print("❌ Error fetching all routes: $e");
+    }
+  }
+
   int selectedTabIndex = 0;
   final tabs = ["Dispatch Summary", "News"];
   bool _isButtonPressed = false;
@@ -78,26 +114,6 @@ class _HomeScreenState extends State<HomeScreen> {
             color: Color(0xFF2C3E50), // Dark blue-grey color
           ),  
         ),
-        actions: [
-          if (selectedTabIndex == 0)
-            Container(
-              margin: EdgeInsets.only(right: 20, top: 12),
-              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.indigo[50],
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                "16 PARCELS",
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.indigo[800],
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ),
-        ],
       ),
       body: Column(
         children: [
@@ -227,46 +243,272 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // 📦 Dispatch Summary Tab
   Widget buildDispatchList() {
+    List<Map<String, dynamic>> filteredRoutes = allRoutes;
+
+    // Apply filter
+    if (selectedFilter != "All") {
+      filteredRoutes = filteredRoutes.where((route) {
+        final routeDate = DateTime.parse(route['timestamp']);
+        final today = DateTime.now();
+        if (selectedFilter == "Today") {
+          return routeDate.year == today.year &&
+              routeDate.month == today.month &&
+              routeDate.day == today.day;
+        } else if (selectedFilter == "This Week") {
+          final weekStart = today.subtract(Duration(days: today.weekday - 1));
+          final weekEnd = weekStart.add(Duration(days: 6));
+          return routeDate.isAfter(weekStart) && routeDate.isBefore(weekEnd);
+        }
+        return false;
+      }).toList();
+    }
+
+    // Apply sorting
+    filteredRoutes.sort((a, b) {
+      final dateA = DateTime.parse(a['timestamp']);
+      final dateB = DateTime.parse(b['timestamp']);
+      return isAscending ? dateA.compareTo(dateB) : dateB.compareTo(dateA);
+    });
+
     return ListView(
       physics: BouncingScrollPhysics(),
+      padding: EdgeInsets.all(16),
       children: [
-        SizedBox(height: 8),
-        ParcelCard(
-          title: "Total Distance Covered Today",
-          date: "234.5 kilometers",
-          color: Colors.blue[50],
-          status: "Active",
-          statusColor: Colors.blue,
+        // Previous Route Summary
+        if (routeSummary != null)
+          Card(
+            elevation: 4,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: LinearGradient(
+                  colors: [Colors.indigo.shade50, Colors.indigo.shade100],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.history, color: Colors.indigo[700], size: 28),
+                        SizedBox(width: 12),
+                        Text(
+                          "Previous Route",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.indigo[800],
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 12),
+                    _buildSummaryRow(Icons.directions_car, "Distance: ${routeSummary!['distance']} km"),
+                    _buildSummaryRow(Icons.timer_outlined, "Time: ${routeSummary!['time']} minutes"),
+                    _buildSummaryRow(Icons.location_on_outlined, "Addresses: ${routeSummary!['totalAddresses']}"),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        SizedBox(height: 16),
+
+        // Total Routes Summary
+        Card(
+          elevation: 4,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              gradient: LinearGradient(
+                colors: [Colors.deepPurple.shade50, Colors.deepPurple.shade100],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.assessment, color: Colors.deepPurple[700], size: 28),
+                      SizedBox(width: 12),
+                      Text(
+                        "Lifetime Summary",
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.deepPurple[800],
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 12),
+                  _buildSummaryRow(Icons.directions_car, "Total Distance: ${allRoutes.fold<double>(0.0, (sum, route) => sum + ((route['distance'] as num?)?.toDouble() ?? 0.0)).toStringAsFixed(1)} km"),
+                  _buildSummaryRow(Icons.timer_outlined, "Total Time: ${allRoutes.fold<int>(0, (sum, route) => sum + ((route['time'] as num?)?.toInt() ?? 0))} minutes"),
+                  _buildSummaryRow(Icons.location_on_outlined, "Total Addresses: ${allRoutes.fold<int>(0, (sum, route) => sum + ((route['totalAddresses'] as num?)?.toInt() ?? 0))}"),
+                ],
+              ),
+            ),
+          ),
         ),
-        ParcelCard(
-          title: "Average Delivery Time",
-          date: "45 minutes per parcel",
-          color: Colors.green[50],
-          status: "Good",
-          statusColor: Colors.green,
+        SizedBox(height: 20),
+        Divider(thickness: 1, color: Colors.grey[300]),
+        SizedBox(height: 10),
+
+        // Filter and Sort Options
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey[200],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: selectedFilter,
+                    icon: Icon(Icons.filter_list, color: Colors.indigo),
+                    items: ["All", "Today", "This Week"]
+                        .map((filter) => DropdownMenuItem(
+                              value: filter,
+                              child: Text(
+                                filter,
+                                style: TextStyle(
+                                    fontSize: 14, fontWeight: FontWeight.w500),
+                              ),
+                            ))
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedFilter = value!;
+                      });
+                    },
+                  ),
+                ),
+              ),
+              TextButton.icon(
+                icon: Icon(
+                  isAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                  color: Colors.indigo,
+                  size: 20,
+                ),
+                label: Text(
+                  isAscending ? "Oldest First" : "Newest First",
+                  style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.w600),
+                ),
+                onPressed: () {
+                  setState(() {
+                    isAscending = !isAscending;
+                  });
+                },
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  backgroundColor: Colors.indigo.withOpacity(0.1),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
-        ParcelCard(
-          title: "Fuel Consumption",
-          date: "32.4 liters used today",
-          color: Colors.amber[50],
-          status: "Normal",
-          statusColor: Colors.orange,
-        ),
-        ParcelCard(
-          title: "Successful Deliveries",
-          date: "16 out of 16 parcels",
-          color: Colors.purple[50],
-          status: "100%",
-          statusColor: Colors.purple,
-        ),
-        ParcelCard(
-          title: "Carbon Footprint",
-          date: "75.2 kg CO₂ emissions",
-          color: Colors.teal[50],
-          status: "-12%",
-          statusColor: Colors.teal,
-        ),
+        SizedBox(height: 10),
+
+        // Filtered Routes List
+        if (filteredRoutes.isEmpty && selectedFilter != "All")
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32.0),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(Icons.search_off, size: 48, color: Colors.grey[400]),
+                  SizedBox(height: 8),
+                  Text(
+                    "No routes found for '$selectedFilter'.",
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else if (allRoutes.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32.0),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(Icons.map_outlined, size: 48, color: Colors.grey[400]),
+                  SizedBox(height: 8),
+                  Text(
+                    "No dispatch history yet.",
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    "Start a dispatch to see your routes here.",
+                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          ...filteredRoutes.map((route) {
+            final routeDate = DateTime.parse(route['timestamp']);
+            return Card(
+              elevation: 2,
+              margin: EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Colors.indigo[100],
+                  child: Icon(Icons.route_outlined, color: Colors.indigo[700]),
+                ),
+                title: Text(
+                  "Route on ${routeDate.toLocal().toString().split(' ')[0]}",
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: 4),
+                    Text("Distance: ${route['distance']} km"),
+                    Text("Time: ${route['time']} minutes"),
+                    Text("Addresses: ${route['totalAddresses']}"),
+                  ],
+                ),
+                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+                onTap: () {
+                  // Optional: Navigate to a detailed view of the route
+                },
+              ),
+            );
+          }).toList(),
       ],
+    );
+  }
+
+  Widget _buildSummaryRow(IconData icon, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Colors.black54),
+          SizedBox(width: 8),
+          Text(text, style: TextStyle(fontSize: 15, color: Colors.black87)),
+        ],
+      ),
     );
   }
 

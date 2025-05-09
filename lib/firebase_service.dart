@@ -149,4 +149,52 @@ class FirebaseService {
     }
     print("🗑️ All parcels deleted for user $userEmail");
   }
+
+  Future<void> saveRouteSummary(String userEmail, {required double distance, required int time, required int totalAddresses}) async {
+    try {
+      await FirebaseFirestore.instance.collection('route_summaries').doc(userEmail).set({
+        'distance': distance,
+        'time': time,
+        'totalAddresses': totalAddresses,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print("❌ Error saving route summary: $e");
+    }
+  }
+
+  Future<Map<String, dynamic>?> getRouteSummary(String? userEmail) async {
+    if (userEmail == null) return null;
+    try {
+      final doc = await FirebaseFirestore.instance.collection('route_summaries').doc(userEmail).get();
+      return doc.exists ? doc.data() : null;
+    } catch (e) {
+      print("❌ Error fetching route summary: $e");
+      return null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getAllRoutes(String? userEmail) async {
+    if (userEmail == null) return [];
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('route_summaries')
+          .where('userEmail', isEqualTo: userEmail)
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'distance': data['distance'],
+          'time': data['time'],
+          'totalAddresses': data['totalAddresses'],
+          'timestamp': data['timestamp'].toDate().toIso8601String(),
+        };
+      }).toList();
+    } catch (e) {
+      print("❌ Error fetching all routes: $e");
+      return [];
+    }
+  }
 }

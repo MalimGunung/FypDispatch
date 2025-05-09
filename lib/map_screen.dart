@@ -43,6 +43,7 @@ class _MapScreenState extends State<MapScreen> {
   bool _userInteractingWithMap = false;
   DateTime? _lastMapInteraction;
   final Duration _interactionTimeout = Duration(seconds: 5);
+  DateTime startTime = DateTime.now(); // Track start time
 
   @override
   void initState() {
@@ -248,6 +249,25 @@ class _MapScreenState extends State<MapScreen> {
             ),
           );
         }
+
+        double totalDistance = polylines.first.points.fold(0.0, (sum, point) {
+          // Calculate total distance from polyline points
+          if (sum == 0.0) return 0.0;
+          return sum +
+              Geolocator.distanceBetween(
+                point.latitude,
+                point.longitude,
+                polylines.first.points[polylines.first.points.indexOf(point) - 1]
+                    .latitude,
+                polylines.first.points[polylines.first.points.indexOf(point) - 1]
+                    .longitude,
+              );
+        });
+
+        int totalTime = DateTime.now().difference(startTime).inMinutes; // Calculate total time
+        int totalAddresses = deliveryStatus.length + 1; // Include the starting point
+
+        await recordRouteSummaryToFirebase(totalDistance / 1000, totalTime, totalAddresses); // Save to Firebase
       }
     }
   }
@@ -298,8 +318,7 @@ class _MapScreenState extends State<MapScreen> {
 
   // ✅ Fetch delivery locations and generate optimized route
   Future<void> fetchDeliveryLocations() async {
-    if (!hasStartedDelivery)
-      return; // ✅ Prevents auto-starting before pressing "Start Delivery"
+    if (!hasStartedDelivery) return;
 
     Position? position = await LocationService.getCurrentLocation();
     if (position == null) {
@@ -364,9 +383,6 @@ class _MapScreenState extends State<MapScreen> {
       });
 
       drawORSRoute(); // ✅ Call this to draw the polyline
-
-      // ✅ Start tracking dispatcher location for automation
-      startTrackingDispatcher();
     }
   }
 
@@ -599,6 +615,20 @@ class _MapScreenState extends State<MapScreen> {
       ),
     );
     return shouldLeave == true;
+  }
+
+  Future<void> recordRouteSummaryToFirebase(double distance, int time, int totalAddresses) async {
+    try {
+      await firebaseService.saveRouteSummary(
+        widget.userEmail,
+        distance: distance,
+        time: time,
+        totalAddresses: totalAddresses,
+      );
+      print("✅ Route summary recorded to Firebase.");
+    } catch (e) {
+      print("❌ Error recording route summary: $e");
+    }
   }
 
   @override
