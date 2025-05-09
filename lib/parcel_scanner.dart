@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart'; // <-- Add this import
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:async'; // <-- Add this import for Timer
 
 class ParcelScanning extends StatefulWidget {
   final String userEmail;
@@ -48,15 +49,18 @@ class _ParcelScanningState extends State<ParcelScanning> {
   }
 
   // Remove the old calculateDistance method (Haversine)
-  Future<double?> _getORSRoadDistance(double lat1, double lon1, double lat2, double lon2) async {
-    const String _orsApiKey = '5b3ce3597851110001cf6248c4f4ec157fda4aa7a289bd1c8e4ef93f';
+  Future<double?> _getORSRoadDistance(
+      double lat1, double lon1, double lat2, double lon2) async {
+    const String _orsApiKey =
+        '5b3ce3597851110001cf6248c4f4ec157fda4aa7a289bd1c8e4ef93f';
     final url =
         'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$_orsApiKey&start=$lon1,$lat1&end=$lon2,$lat2';
     try {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final distanceMeters = data['features'][0]['properties']['segments'][0]['distance'];
+        final distanceMeters =
+            data['features'][0]['properties']['segments'][0]['distance'];
         return distanceMeters / 1000.0; // return in KM
       } else {
         print("❌ ORS API Error: ${response.body}");
@@ -105,55 +109,57 @@ class _ParcelScanningState extends State<ParcelScanning> {
   }
 
   // ✅ Capture and scan an address from an image
-Future<void> scanParcel() async {
-  final ImagePicker _picker = ImagePicker();
-  final pickedFile = await _picker.pickImage(source: ImageSource.camera);
+  Future<void> scanParcel() async {
+    final ImagePicker _picker = ImagePicker();
+    final pickedFile = await _picker.pickImage(source: ImageSource.camera);
 
-  if (pickedFile != null) {
-    final imagePath = pickedFile.path;
+    if (pickedFile != null) {
+      setState(() => isLoading = true); // Show loader
+      final imagePath = pickedFile.path;
 
-    String address = await mlkitOCR.extractTextFromImage(imagePath);
+      String address = await mlkitOCR.extractTextFromImage(imagePath);
 
-    if (address.isEmpty || address == "No valid address detected") {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ No valid address detected. Please try again.")),
+      if (address.isEmpty || address == "No valid address detected") {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content: Text("❌ No valid address detected. Please try again.")),
+        );
+        return;
+      }
+
+      var coordinates = await getCoordinates(address);
+
+      if (coordinates == null ||
+          !coordinates.containsKey("latitude") ||
+          !coordinates.containsKey("longitude")) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("❌ Failed to get location for this address!")),
+        );
+        print("❌ Geocoding Failed for Address: $address");
+        return;
+      }
+
+      double latitude = coordinates["latitude"]!;
+      double longitude = coordinates["longitude"]!;
+
+      print("✅ Address: $address");
+      print("📍 Latitude: $latitude, Longitude: $longitude");
+
+      await firebaseService.saveParcelData(
+        widget.userEmail,
+        address,
+        latitude,
+        longitude,
       );
-      return;
-    }
 
-    var coordinates = await getCoordinates(address);
+      await fetchStoredAddresses(); // Refresh UI, which also sets isLoading = false
 
-    if (coordinates == null ||
-        !coordinates.containsKey("latitude") ||
-        !coordinates.containsKey("longitude")) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ Failed to get location for this address!")),
+        SnackBar(content: Text("✅ Parcel Added Successfully!")),
       );
-      print("❌ Geocoding Failed for Address: $address");
-      return;
+      // isLoading is set to false by fetchStoredAddresses
     }
-
-    double latitude = coordinates["latitude"]!;
-    double longitude = coordinates["longitude"]!;
-
-    print("✅ Address: $address");
-    print("📍 Latitude: $latitude, Longitude: $longitude");
-
-    await firebaseService.saveParcelData(
-      widget.userEmail,
-      address,
-      latitude,
-      longitude,
-    );
-
-    fetchStoredAddresses(); // Refresh UI
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("✅ Parcel Added Successfully!")),
-    );
   }
-  }
-
 
   // ✅ Convert address to latitude and longitude
   Future<Map<String, double>?> getCoordinates(String address) async {
@@ -186,206 +192,375 @@ Future<void> scanParcel() async {
     bool isLoadingSuggestions = false;
     int lastRequestId = 0;
 
-    Future<void> fetchSuggestions(String query, void Function(void Function()) setState) async {
-      final int requestId = ++lastRequestId;
-      if (query.trim().isEmpty) {
-        setState(() {
-          suggestions = [];
-          isLoadingSuggestions = false;
-        });
-        return;
-      }
-      setState(() {
-        isLoadingSuggestions = true;
-      });
-      try {
-        // Focus autocomplete on Malaysia by appending ', Malaysia' if not present
-        String searchQuery = query;
-        if (!searchQuery.toLowerCase().contains('malaysia')) {
-          searchQuery = '$searchQuery, Malaysia';
-        }
-        List<Location> locations = await locationFromAddress(searchQuery);
-        List<String> newSuggestions = [];
-        for (var loc in locations) {
-          final placemarks = await placemarkFromCoordinates(loc.latitude, loc.longitude);
-          if (placemarks.isNotEmpty) {
-            final p = placemarks.first;
-            // Only include suggestions in Malaysia
-            if ((p.country ?? '').toLowerCase().contains('malaysia')) {
-              String addr = [
-                if (p.street != null && p.street!.isNotEmpty) p.street,
-                if (p.subLocality != null && p.subLocality!.isNotEmpty) p.subLocality,
-                if (p.locality != null && p.locality!.isNotEmpty) p.locality,
-                if (p.administrativeArea != null && p.administrativeArea!.isNotEmpty) p.administrativeArea,
-                if (p.country != null && p.country!.isNotEmpty) p.country,
-              ].whereType<String>().join(', ');
-              if (addr.isNotEmpty) newSuggestions.add(addr);
-            }
-          }
-        }
-        // Only update if this is the latest request
-        if (requestId == lastRequestId) {
-          setState(() {
-            suggestions = newSuggestions.toSet().toList();
-            isLoadingSuggestions = false;
-          });
-        }
-      } catch (_) {
-        if (requestId == lastRequestId) {
-          setState(() {
+    // Debounce mechanism for suggestions
+    _DebounceTimer? debounceTimer;
+
+    Future<void> fetchSuggestionsWithDebounce(
+        String query, void Function(void Function()) setStateDialog) async {
+      debounceTimer?.cancel();
+      debounceTimer = _DebounceTimer(Duration(milliseconds: 400), () async {
+        final int requestId = ++lastRequestId;
+        if (query.trim().length < 3) {
+          // Minimum characters to trigger search
+          setStateDialog(() {
             suggestions = [];
             isLoadingSuggestions = false;
           });
+          return;
         }
-      }
+        setStateDialog(() {
+          isLoadingSuggestions = true;
+        });
+        try {
+          String searchQuery = query;
+          if (!searchQuery.toLowerCase().contains('malaysia')) {
+            searchQuery = '$searchQuery, Malaysia';
+          }
+          List<Location> locations = await locationFromAddress(searchQuery);
+          List<String> newSuggestions = [];
+          if (locations.isNotEmpty) {
+            for (var loc in locations.take(5)) {
+              // Limit suggestions
+              final placemarks =
+                  await placemarkFromCoordinates(loc.latitude, loc.longitude);
+              if (placemarks.isNotEmpty) {
+                final p = placemarks.first;
+                if ((p.country ?? '').toLowerCase().contains('malaysia')) {
+                  String addr = [
+                    if (p.name != null && p.name!.isNotEmpty) p.name,
+                    if (p.street != null &&
+                        p.street!.isNotEmpty &&
+                        p.name != p.street)
+                      p.street,
+                    if (p.subLocality != null && p.subLocality!.isNotEmpty)
+                      p.subLocality,
+                    if (p.locality != null && p.locality!.isNotEmpty)
+                      p.locality,
+                    if (p.postalCode != null && p.postalCode!.isNotEmpty)
+                      p.postalCode,
+                    if (p.administrativeArea != null &&
+                        p.administrativeArea!.isNotEmpty)
+                      p.administrativeArea,
+                  ]
+                      .where((s) => s != null && s.isNotEmpty)
+                      .toSet()
+                      .toList()
+                      .join(', ');
+                  if (addr.isNotEmpty && !newSuggestions.contains(addr))
+                    newSuggestions.add(addr); // Ensure unique suggestions
+                }
+              }
+            }
+          }
+          if (requestId == lastRequestId) {
+            // Ensure this is the latest request
+            setStateDialog(() {
+              suggestions = newSuggestions.toSet().toList();
+              isLoadingSuggestions = false;
+            });
+          }
+        } catch (e) {
+          print("Suggestion fetch error: $e");
+          if (requestId == lastRequestId) {
+            setStateDialog(() {
+              suggestions = [];
+              isLoadingSuggestions = false;
+            });
+          }
+        }
+      });
     }
 
     showDialog(
       context: context,
+      barrierDismissible: true, // Allow dismissing by tapping outside
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setState) {
+          // Use StatefulBuilder for dialog's own state
+          builder: (context, setStateDialog) {
             return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 22),
-                child: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.edit_location_alt, color: Colors.blueAccent.shade700, size: 38),
-                      SizedBox(height: 10),
-                      Text(
-                        "Edit Address",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                          fontFamily: 'Montserrat',
-                          color: Colors.blueAccent.shade700,
-                        ),
-                      ),
-                      SizedBox(height: 18),
-                      Stack(
-                        children: [
-                          TextFormField(
-                            controller: addressController,
-                            maxLines: 5, // Increased to 5 lines
-                            decoration: InputDecoration(
-                              labelText: "New Address",
-                              prefixIcon: Padding(
-                                padding: EdgeInsets.only(bottom: 80), // Increased padding
-                                child: Icon(Icons.location_on_outlined),
-                              ),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                              filled: true,
-                              fillColor: Colors.blueGrey[50],
-                              contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 25), // Increased padding
-                              alignLabelWithHint: true,
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return "Address cannot be empty";
-                              }
-                              return null;
-                            },
-                            style: TextStyle(
-                              fontFamily: 'Montserrat',
-                              fontSize: 18, // Increased font size
-                              height: 1.6, // Increased line height
-                            ),
-                            onChanged: (value) {
-                              fetchSuggestions(value, setState);
-                            },
-                          ),
-                          if (isLoadingSuggestions)
-                            Positioned(
-                              right: 10,
-                              top: 12,
-                              child: SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              ),
-                            ),
-                        ],
-                      ),
-                      if (suggestions.isNotEmpty)
+              shape: RoundedRectangleBorder(
+                  borderRadius:
+                      BorderRadius.circular(16)), // Standardized radius
+              elevation: 5,
+              backgroundColor: Color(0xFFFDFEFE), // Slightly off-white
+              child: SingleChildScrollView(
+                // Important for small screens with keyboard
+                child: Padding(
+                  padding: const EdgeInsets.all(22.0), // Consistent padding
+                  child: Form(
+                    key: formKey,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment:
+                          CrossAxisAlignment.stretch, // Stretch buttons
+                      children: [
                         Container(
-                          margin: EdgeInsets.only(top: 4),
-                          constraints: BoxConstraints(maxHeight: 120),
+                          padding: EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            border: Border.all(color: Colors.blueGrey.shade100),
-                            borderRadius: BorderRadius.circular(8),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black12,
-                                blurRadius: 4,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
+                            color: Colors.blueAccent.shade100.withOpacity(0.1),
+                            shape: BoxShape.circle,
                           ),
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: suggestions.length,
-                            itemBuilder: (context, idx) {
-                              return ListTile(
-                                dense: true,
-                                title: Text(
-                                  suggestions[idx],
-                                  style: TextStyle(fontFamily: 'Montserrat'),
-                                ),
-                                onTap: () {
-                                  setState(() {
-                                    addressController.text = suggestions[idx];
-                                    suggestions = [];
-                                  });
-                                },
-                              );
-                            },
+                          child: Icon(Icons.edit_location_alt_outlined,
+                              color: Colors.blueAccent.shade700, size: 28),
+                        ),
+                        SizedBox(height: 10),
+                        Text(
+                          "Edit Parcel Address",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18, // Slightly reduced
+                            fontFamily: 'Montserrat',
+                            color: Colors.blueGrey[800],
                           ),
                         ),
-                      SizedBox(height: 22),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton.icon(
-                            icon: Icon(Icons.save, color: Colors.green),
-                            label: Text("Save", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-                            onPressed: () async {
-                              if (formKey.currentState!.validate()) {
-                                String newAddress = addressController.text.trim();
-                                var coordinates = await getCoordinates(newAddress);
-                                if (coordinates != null) {
-                                  await firebaseService.updateParcel(
-                                    widget.userEmail,
-                                    documentId,
-                                    newAddress,
-                                    coordinates["latitude"]!,
-                                    coordinates["longitude"]!,
-                                  );
-                                  fetchStoredAddresses();
-                                  Navigator.pop(context);
-                                } else {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
+                        SizedBox(height: 20),
+                        TextFormField(
+                          controller: addressController,
+                          minLines: 2,
+                          maxLines: 4, // Max 4 lines for consistency
+                          keyboardType: TextInputType.multiline,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: InputDecoration(
+                            hintText: "Enter full address details...",
+                            labelText: "Full Address",
+                            labelStyle: TextStyle(
+                                color: Colors.blueGrey[500],
+                                fontFamily: 'Montserrat',
+                                fontSize: 14),
+                            prefixIcon: Icon(Icons.markunread_mailbox_outlined,
+                                color: Colors.blueGrey[300], size: 20),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(
+                                    color: Colors.blueGrey.shade100)),
+                            enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(
+                                    color: Colors.blueGrey.shade100)),
+                            focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: BorderSide(
+                                    color: Colors.blueAccent.shade400,
+                                    width: 1.5)),
+                            filled: true,
+                            fillColor: Colors.white, // Cleaner fill
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 12),
+                            alignLabelWithHint: true,
+                            suffixIcon: isLoadingSuggestions
+                                ? Padding(
+                                    padding: const EdgeInsets.all(10.0),
+                                    child: SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 1.8,
+                                            valueColor: AlwaysStoppedAnimation<
+                                                    Color>(
+                                                Colors.blueAccent.shade200))),
+                                  )
+                                : null,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return "Address cannot be empty.";
+                            }
+                            if (value.trim().length < 10) {
+                              return "Address seems too short. Please provide more details.";
+                            }
+                            return null;
+                          },
+                          style: TextStyle(
+                            fontFamily: 'Montserrat',
+                            fontSize: 14.5, // Adjusted
+                            color: Colors.blueGrey[700],
+                            height: 1.4, // Line height
+                          ),
+                          onChanged: (value) {
+                            fetchSuggestionsWithDebounce(value, setStateDialog);
+                          },
+                        ),
+                        if (suggestions.isNotEmpty)
+                          Container(
+                            margin: EdgeInsets.only(
+                                top: 8, bottom: 8), // Adjusted margin
+                            constraints: BoxConstraints(
+                                maxHeight: 120), // Adjusted height
+                            decoration: BoxDecoration(
+                                color: Colors.grey
+                                    .shade50, // Lighter background for suggestions
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                    color: Colors.blueGrey.shade100
+                                        .withOpacity(0.7))),
+                            child: ListView.separated(
+                              // Added separator
+                              shrinkWrap: true,
+                              itemCount: suggestions.length,
+                              separatorBuilder: (_, __) => Divider(
+                                  height: 1,
+                                  thickness: 0.5,
+                                  color: Colors.blueGrey.shade100
+                                      .withOpacity(0.5)),
+                              itemBuilder: (context, idx) {
+                                return InkWell(
+                                  borderRadius: BorderRadius.circular(
+                                      6), // Match inner radius
+                                  onTap: () {
+                                    setStateDialog(() {
+                                      addressController.text = suggestions[idx];
+                                      addressController.selection =
+                                          TextSelection.fromPosition(
+                                              TextPosition(
+                                                  offset: addressController
+                                                      .text.length));
+                                      suggestions =
+                                          []; // Clear suggestions after selection
+                                    });
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12.0,
+                                        vertical: 9.0), // Adjusted padding
+                                    child: Text(
+                                      suggestions[idx],
+                                      style: TextStyle(
+                                          fontFamily: 'Montserrat',
+                                          fontSize: 13,
+                                          color: Colors
+                                              .blueGrey[700]), // Adjusted style
+                                      maxLines:
+                                          1, // Ensure single line for cleaner look
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        SizedBox(height: 24), // Increased spacing
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextButton(
+                                child: Text("CANCEL",
+                                    style: TextStyle(
+                                        color: Colors.blueGrey[600],
+                                        fontWeight: FontWeight.w600,
+                                        fontFamily: 'Montserrat',
+                                        fontSize: 13.5)),
+                                onPressed: () => Navigator.pop(context),
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      side: BorderSide(
+                                          color: Colors.blueGrey.shade200)),
+                                  backgroundColor: Colors.white,
+                                ),
+                              ),
+                            ),
+                            SizedBox(width: 12), // Increased spacing
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                icon: Icon(Icons.save_alt_rounded, size: 16),
+                                label: Text("SAVE",
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontFamily: 'Montserrat',
+                                        fontSize: 13.5,
+                                        letterSpacing: 0.5)),
+                                onPressed: () async {
+                                  if (formKey.currentState!.validate()) {
+                                    String newAddress =
+                                        addressController.text.trim();
+                                    // Show loading indicator
+                                    showDialog(
+                                      context: context,
+                                      barrierDismissible: false,
+                                      builder: (BuildContext context) {
+                                        return Dialog(
+                                          backgroundColor: Colors.white,
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12)),
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 20, horizontal: 24),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                CircularProgressIndicator(
+                                                    valueColor:
+                                                        AlwaysStoppedAnimation<
+                                                                Color>(
+                                                            Colors.blueAccent
+                                                                .shade700)),
+                                                SizedBox(width: 24),
+                                                Text("Updating Address...",
+                                                    style: TextStyle(
+                                                        fontFamily:
+                                                            'Montserrat',
+                                                        fontSize: 15,
+                                                        color: Colors
+                                                            .blueGrey[700])),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    );
+
+                                    var coordinates =
+                                        await getCoordinates(newAddress);
+                                    Navigator.pop(
+                                        context); // Dismiss loading indicator
+
+                                    if (coordinates != null) {
+                                      await firebaseService.updateParcel(
+                                        widget.userEmail,
+                                        documentId,
+                                        newAddress,
+                                        coordinates["latitude"]!,
+                                        coordinates["longitude"]!,
+                                      );
+                                      await fetchStoredAddresses(); // Refresh list and distances
+                                      Navigator.pop(
+                                          context); // Dismiss edit dialog
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                            content: Text(
+                                                "✅ Address updated successfully!")),
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(SnackBar(
                                         content: Text(
-                                            "❌ Failed to get location for the new address!")),
-                                  );
-                                }
-                              }
-                            },
-                          ),
-                          SizedBox(width: 8),
-                          TextButton.icon(
-                            icon: Icon(Icons.cancel, color: Colors.redAccent),
-                            label: Text("Cancel", style: TextStyle(color: Colors.redAccent)),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                        ],
-                      ),
-                    ],
+                                            "❌ Could not find location for the new address. Please verify and try again."),
+                                        duration: Duration(seconds: 3),
+                                      ));
+                                    }
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blueAccent.shade700,
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.symmetric(
+                                      vertical: 12), // Consistent padding
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                          8)), // Consistent radius
+                                  elevation: 2,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -402,18 +577,20 @@ Future<void> scanParcel() async {
     try {
       // Set delivery status as complete for all selected parcels
       for (final id in selectedItems) {
-        await firebaseService.updateDeliveryStatus(widget.userEmail, id, "complete");
+        await firebaseService.updateDeliveryStatus(
+            widget.userEmail, id, "complete");
       }
 
       // Update status and move to history
-      await firebaseService.moveToHistory(widget.userEmail, selectedItems.toList());
+      await firebaseService.moveToHistory(
+          widget.userEmail, selectedItems.toList());
 
       // Clear selection and refresh list
       setState(() {
         selectedItems.clear();
         selectionMode = false;
       });
-      
+
       fetchStoredAddresses();
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -429,67 +606,128 @@ Future<void> scanParcel() async {
   @override
   Widget build(BuildContext context) {
     final themeBlue = Colors.blueAccent.shade700;
-    final gradientBg = BoxDecoration(
+    final bodyGradient = BoxDecoration(
       gradient: LinearGradient(
-        colors: [Color(0xFFe0eafc), Color(0xFFcfdef3)],
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFFF3F5F9),
+          Color(0xFFE8EFF5)
+        ], // Even softer, more neutral gradient
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
       ),
     );
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
+      extendBodyBehindAppBar: false, // AppBar has its own gradient
       appBar: AppBar(
-        backgroundColor: Colors.white.withOpacity(0.85),
-        elevation: 2,
+        backgroundColor: Colors.transparent, // Covered by flexibleSpace
+        elevation: 0, // No shadow, gradient provides depth
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: const Color.fromARGB(255, 7, 7, 7)),
+          icon: Icon(Icons.arrow_back_ios_new_rounded,
+              color: Colors.white, size: 22), // Slightly smaller
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          "Scan & Manage Parcels",
+          selectionMode
+              ? "${selectedItems.length} Item(s) Selected"
+              : "Parcel Management", // More descriptive
           style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: themeBlue,
+            fontSize: 19, // Adjusted size
+            fontWeight: FontWeight.w600, // Semi-bold
+            color: Colors.white,
             fontFamily: 'Montserrat',
-            letterSpacing: 1.1,
           ),
         ),
-        iconTheme: IconThemeData(color: themeBlue),
+        centerTitle: true,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                themeBlue,
+                Colors.blueAccent.shade400
+              ], // Consistent AppBar gradient
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         actions: selectionMode
             ? [
                 PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert, color: themeBlue),
-                  tooltip: "Actions",
+                  icon: Icon(Icons.more_vert_rounded, color: Colors.white, size: 26),
+                  tooltip: "More Actions",
                   onSelected: (value) async {
                     switch (value) {
-                      case 'select_all':
+                      case 'select_all_toggle':
                         setState(() {
-                          selectedItems = addressList
-                              .map((item) => item["id"].toString())
-                              .toSet();
+                          if (selectedItems.length == addressList.length && addressList.isNotEmpty) {
+                            selectedItems.clear();
+                          } else if (addressList.isNotEmpty) {
+                            selectedItems = addressList
+                                .map((item) => item["id"].toString())
+                                .toSet();
+                          }
                         });
-                        break;
-                      case 'deselect_all':
-                        setState(() {
-                          selectedItems.clear();
-                        });
-                        break;
-                      case 'delete':
-                        for (var id in selectedItems) {
-                          await firebaseService.deleteParcel(widget.userEmail, id);
-                        }
-                        setState(() {
-                          selectedItems.clear();
-                          selectionMode = false;
-                        });
-                        fetchStoredAddresses();
                         break;
                       case 'mark_complete':
-                        await markDeliveriesComplete();
+                        if (selectedItems.isNotEmpty) {
+                          markDeliveriesComplete();
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("No items selected to mark as complete.")),
+                          );
+                        }
                         break;
-                      case 'cancel':
+                      case 'delete_selected':
+                        if (selectedItems.isNotEmpty) {
+                          bool? confirmDelete = await showDialog<bool>(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: Text("Confirm Deletion", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[800])),
+                                content: Text("Delete ${selectedItems.length} selected parcel(s)? This cannot be undone.", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[600])),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                actions: <Widget>[
+                                  TextButton(
+                                    child: Text("CANCEL", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[500], fontWeight: FontWeight.w600)),
+                                    onPressed: () => Navigator.of(context).pop(false),
+                                  ),
+                                  TextButton(
+                                    child: Text("DELETE", style: TextStyle(fontFamily: 'Montserrat', color: Colors.red.shade600, fontWeight: FontWeight.w600)),
+                                    onPressed: () => Navigator.of(context).pop(true),
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                          if (confirmDelete == true) {
+                            for (var id in selectedItems) {
+                              await firebaseService.deleteParcel(widget.userEmail, id);
+                            }
+                            fetchStoredAddresses(); // Refreshes list and clears selection internally if needed
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text("✅ ${selectedItems.length} parcel(s) deleted.")),
+                            );
+                             // Ensure selection mode is exited if all items were deleted or as per desired UX
+                            if (addressList.isEmpty || selectedItems.isEmpty) {
+                                setState(() {
+                                    selectionMode = false;
+                                    selectedItems.clear();
+                                });
+                            } else {
+                                // If some items remain, just clear the current selection
+                                setState(() {
+                                    selectedItems.clear();
+                                });
+                            }
+                          }
+                        } else {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("No items selected to delete.")),
+                          );
+                        }
+                        break;
+                      case 'exit_selection':
                         setState(() {
                           selectionMode = false;
                           selectedItems.clear();
@@ -497,134 +735,176 @@ Future<void> scanParcel() async {
                         break;
                     }
                   },
-                  itemBuilder: (context) => [
+                  itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                     PopupMenuItem<String>(
-                      value: selectedItems.length < addressList.length ? 'select_all' : 'deselect_all',
+                      value: 'select_all_toggle',
+                      enabled: addressList.isNotEmpty,
                       child: Row(
                         children: [
                           Icon(
-                            selectedItems.length < addressList.length
-                                ? Icons.select_all
-                                : Icons.deselect,
-                            color: Colors.green,
+                            selectedItems.length == addressList.length && addressList.isNotEmpty
+                                ? Icons.deselect_rounded
+                                : Icons.select_all_rounded,
+                            color: Colors.blueGrey[700],
                           ),
-                          SizedBox(width: 8),
-                          Text(selectedItems.length < addressList.length ? "Select All" : "Deselect All"),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete, color: Colors.redAccent),
-                          SizedBox(width: 8),
-                          Text("Delete Selected"),
+                          SizedBox(width: 10),
+                          Text(
+                            selectedItems.length == addressList.length && addressList.isNotEmpty
+                                ? "Deselect All"
+                                : "Select All",
+                            style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[700]),
+                          ),
                         ],
                       ),
                     ),
                     PopupMenuItem<String>(
                       value: 'mark_complete',
+                      enabled: selectedItems.isNotEmpty,
                       child: Row(
                         children: [
-                          Icon(Icons.check_circle, color: Colors.green),
-                          SizedBox(width: 8),
-                          Text("Mark as Complete"),
+                          Icon(Icons.done_all_sharp, color: Colors.green.shade600),
+                          SizedBox(width: 10),
+                          Text("Mark as Complete", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[700])),
                         ],
                       ),
                     ),
                     PopupMenuItem<String>(
-                      value: 'cancel',
+                      value: 'delete_selected',
+                      enabled: selectedItems.isNotEmpty,
                       child: Row(
                         children: [
-                          Icon(Icons.cancel, color: themeBlue),
-                          SizedBox(width: 8),
-                          Text("Cancel Selection"),
+                          Icon(Icons.delete_forever_outlined, color: Colors.red.shade600),
+                          SizedBox(width: 10),
+                          Text("Delete Selected", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[700])),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    PopupMenuItem<String>(
+                      value: 'exit_selection',
+                      child: Row(
+                        children: [
+                          Icon(Icons.cancel_outlined, color: Colors.blueGrey[700]),
+                          SizedBox(width: 10),
+                          Text("Exit Selection Mode", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[700])),
                         ],
                       ),
                     ),
                   ],
                 ),
               ]
-            : [],
+            : [
+                // Optional: Refresh button when not in selection mode
+                IconButton(
+                  icon: Icon(Icons.refresh_rounded, color: Colors.white),
+                  tooltip: "Refresh List",
+                  onPressed: isLoading
+                      ? null
+                      : fetchStoredAddresses, // Disable if already loading
+                ),
+              ],
       ),
       body: Container(
-        decoration: gradientBg,
-        child: isLoading
-            ? Center(child: CircularProgressIndicator())
+        decoration: bodyGradient,
+        child: isLoading && addressList.isEmpty
+            ? Center(
+                child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(themeBlue),
+                      strokeWidth: 3),
+                  SizedBox(height: 22),
+                  Text("Fetching Parcels...",
+                      style: TextStyle(
+                          fontFamily: 'Montserrat',
+                          fontSize: 15,
+                          color: Colors.blueGrey[500])),
+                ],
+              ))
             : addressList.isEmpty
                 ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.inbox_rounded, size: 64, color: themeBlue.withOpacity(0.25)),
-                        SizedBox(height: 18),
-                        Text(
-                          "📭 No parcels scanned yet.",
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.blueGrey[700],
-                            fontFamily: 'Montserrat',
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 16),
-                    child: ListView.builder(
-                      itemCount: addressList.length,
-                      itemBuilder: (context, index) {
-                        final id = addressList[index]["id"].toString();
-                        final selected = selectedItems.contains(id);
-
-                        double? distance = (orsDistances.length > index) ? orsDistances[index] : null;
-
-                        return Dismissible(
-                          key: Key(id),
-                          direction: DismissDirection.endToStart,
-                          confirmDismiss: (direction) async {
-                            return await showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AlertDialog(
-                                  title: Text("Confirm Delete"),
-                                  content: Text("Are you sure you want to delete this address?"),
-                                  actions: [
-                                    TextButton(
-                                      child: Text("Cancel"),
-                                      onPressed: () => Navigator.of(context).pop(false),
-                                    ),
-                                    TextButton(
-                                      child: Text("Delete", style: TextStyle(color: Colors.red)),
-                                      onPressed: () => Navigator.of(context).pop(true),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-                          },
-                          onDismissed: (direction) {
-                            deleteAddress(id);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("Address deleted")),
-                            );
-                          },
-                          background: Container(
-                            color: Colors.red,
-                            padding: EdgeInsets.symmetric(horizontal: 20),
-                            alignment: AlignmentDirectional.centerEnd,
-                            child: Icon(
-                              Icons.delete,
-                              color: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.all(35.0), // Increased padding
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.add_to_photos_outlined,
+                              size: 60,
+                              color: Colors.blueGrey.shade300
+                                  .withOpacity(0.8)), // Different icon
+                          SizedBox(height: 22),
+                          Text(
+                            "No Parcels Added Yet",
+                            style: TextStyle(
+                              fontSize: 19, // Adjusted
+                              color: Colors.blueGrey[600], // Darker
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          child: GestureDetector(
+                          SizedBox(height: 12),
+                          Text(
+                            "Use the 'Scan Parcel' button to add new delivery items to your list.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                fontSize: 14, // Adjusted
+                                color: Colors.blueGrey[400], // Lighter
+                                fontFamily: 'Montserrat',
+                                height: 1.5),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : RefreshIndicator(
+                    // Added RefreshIndicator
+                    onRefresh: fetchStoredAddresses,
+                    color: themeBlue,
+                    backgroundColor: Colors.white,
+                    strokeWidth: 2.5,
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(
+                          10, 10, 10, 85), // Adjusted padding
+                      itemCount: addressList.length,
+                      itemBuilder: (context, index) {
+                        final item = addressList[index];
+                        final id = item["id"].toString();
+                        final selected = selectedItems.contains(id);
+                        double? distance = (orsDistances.length > index)
+                            ? orsDistances[index]
+                            : null;
+
+                        return Card(
+                          elevation:
+                              selected ? 4 : 1.5, // Subtle elevation change
+                          margin: EdgeInsets.symmetric(
+                              vertical: 6), // Adjusted margin
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(
+                                12), // Slightly less rounded
+                            side: selected
+                                ? BorderSide(
+                                    color: themeBlue.withOpacity(0.7),
+                                    width: 1.5)
+                                : BorderSide(
+                                    color: Colors.grey.shade200, width: 0.8),
+                          ),
+                          color: selected
+                              ? themeBlue.withOpacity(0.04)
+                              : Colors.white,
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(12),
                             onLongPress: () {
                               setState(() {
                                 selectionMode = true;
-                                selectedItems.add(id);
+                                if (selected) {
+                                  selectedItems.remove(id);
+                                  if (selectedItems.isEmpty)
+                                    selectionMode = false;
+                                } else {
+                                  selectedItems.add(id);
+                                }
                               });
                             },
                             onTap: () {
@@ -632,76 +912,106 @@ Future<void> scanParcel() async {
                                 setState(() {
                                   if (selected) {
                                     selectedItems.remove(id);
+                                    if (selectedItems.isEmpty)
+                                      selectionMode = false;
                                   } else {
                                     selectedItems.add(id);
                                   }
                                 });
                               } else {
-                                editAddress(
-                                  addressList[index]["id"],
-                                  addressList[index]["address"],
-                                );
+                                editAddress(item["id"], item["address"]);
                               }
                             },
-                            child: Card(
-                              elevation: selected ? 10 : 5,
-                              shadowColor: themeBlue.withOpacity(0.13),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                              color: selected
-                                  ? themeBlue.withOpacity(0.10)
-                                  : Colors.white.withOpacity(0.97),
-                              margin: EdgeInsets.symmetric(vertical: 8),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0,
+                                  vertical: 5.0), // Reduced vertical padding
                               child: ListTile(
-                                leading: CircleAvatar(
-                                  backgroundColor: themeBlue.withOpacity(0.13),
-                                  child: Icon(Icons.location_on, color: themeBlue),
-                                ),
-                                title: Text(
-                                  addressList[index]["address"],
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 17,
-                                    color: themeBlue,
-                                    fontFamily: 'Montserrat',
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6), // Adjusted padding
+                                leading: Container(
+                                  width: 42, // Slightly smaller
+                                  height: 42,
+                                  decoration: BoxDecoration(
+                                    color: selected
+                                        ? themeBlue.withOpacity(0.1)
+                                        : Colors.grey
+                                            .shade100, // More subtle selection
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Icon(
+                                    selected
+                                        ? Icons.check_circle_outline
+                                        : Icons
+                                            .local_shipping_outlined, // Different icons
+                                    color: selected
+                                        ? themeBlue
+                                        : Colors.blueGrey[400],
+                                    size: 22, // Adjusted size
                                   ),
                                 ),
+                                title: Text(
+                                  item["address"],
+                                  style: TextStyle(
+                                    fontWeight: FontWeight
+                                        .w500, // Normal weight for better readability of long text
+                                    fontSize: 14.5, // Adjusted
+                                    color: Colors
+                                        .blueGrey[700], // Slightly lighter
+                                    fontFamily: 'Montserrat',
+                                  ),
+                                  // Removed maxLines and overflow to show full address
+                                ),
                                 subtitle: Padding(
-                                  padding: const EdgeInsets.only(top: 4.0),
-                                  child: distance != null
-                                      ? Text(
-                                          "📏 Distance: ${distance.toStringAsFixed(2)} km",
-                                          style: TextStyle(
-                                            color: Colors.deepPurple,
-                                            fontSize: 14,
-                                            fontFamily: 'Montserrat',
-                                          ),
-                                        )
-                                      : Text(
-                                          "Distance: --",
-                                          style: TextStyle(
-                                            color: Colors.blueGrey[700],
-                                            fontSize: 14,
-                                            fontFamily: 'Montserrat',
-                                          ),
+                                  padding: const EdgeInsets.only(
+                                      top: 5.0), // Adjusted
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.near_me_outlined,
+                                          size: 14,
+                                          color: Colors.deepPurple
+                                              .shade300), // Different icon
+                                      SizedBox(width: 5),
+                                      Text(
+                                        distance != null
+                                            ? "${distance.toStringAsFixed(1)} km away"
+                                            : "Calculating...", // More natural phrasing
+                                        style: TextStyle(
+                                          color: distance != null
+                                              ? Colors.deepPurple.shade300
+                                              : Colors.blueGrey[
+                                                  300], // Adjusted colors
+                                          fontSize: 12.5, // Adjusted
+                                          fontFamily: 'Montserrat',
+                                          fontWeight: FontWeight.w500,
                                         ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                                 trailing: selectionMode
-                                    ? Checkbox(
-                                        value: selected,
-                                        activeColor: themeBlue,
-                                        onChanged: (value) {
-                                          setState(() {
-                                            if (value!) {
-                                              selectedItems.add(id);
-                                            } else {
-                                              selectedItems.remove(id);
-                                            }
-                                          });
-                                        },
+                                    ? AbsorbPointer(
+                                        // Checkbox is part of the tap area
+                                        child: Checkbox(
+                                          value: selected,
+                                          activeColor: themeBlue,
+                                          onChanged: (bool? value) {
+                                            /* Handled by onTap/onLongPress */
+                                          },
+                                          visualDensity: VisualDensity.compact,
+                                          side: BorderSide(
+                                              color: Colors.blueGrey.shade200,
+                                              width: 1), // Softer border
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(3)),
+                                        ),
                                       )
-                                    : null, // Removed edit and delete buttons
+                                    : Icon(Icons.chevron_right_rounded,
+                                        color: Colors.blueGrey[200],
+                                        size:
+                                            20), // Chevron for edit indication
                               ),
                             ),
                           ),
@@ -710,58 +1020,115 @@ Future<void> scanParcel() async {
                     ),
                   ),
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.95),
-          boxShadow: [
-            BoxShadow(
-              color: themeBlue.withOpacity(0.08),
-              blurRadius: 12,
-              offset: Offset(0, -2),
-            ),
-          ],
+      bottomNavigationBar: BottomAppBar(
+        elevation: 10, // Standard elevation
+        color: Colors.white, // Solid white for clarity
+        shape: CircularNotchedRectangle(), // Optional: if you plan to add a FAB
+        notchMargin: 5.0,
+        child: Container(
+          height: 58, // Slightly reduced height
+          padding: EdgeInsets.symmetric(horizontal: 5), // Reduced padding
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: <Widget>[
+              _buildBottomNavItem(Icons.ballot_outlined, "Optimize", 0,
+                  themeBlue), // Changed label & icon
+              _buildBottomNavItem(Icons.qr_code_scanner, "Scan New", 1,
+                  themeBlue), // Changed label & icon
+              _buildBottomNavItem(Icons.explore_outlined, "View Route", 2,
+                  themeBlue), // Changed label & icon
+            ],
+          ),
         ),
-        child: BottomNavigationBar(
-          backgroundColor: Colors.transparent,
-          selectedItemColor: themeBlue,
-          unselectedItemColor: Colors.blueGrey[400],
-          selectedLabelStyle: TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.bold),
-          unselectedLabelStyle: TextStyle(fontFamily: 'Montserrat'),
-          elevation: 0,
-          items: [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.list_alt),
-              label: "Delivery List",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.camera_alt),
-              label: "Scan",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.map),
-              label: "Map View",
-            ),
-          ],
-          onTap: (index) {
+      ),
+    );
+  }
+
+  Widget _buildBottomNavItem(
+      IconData icon, String label, int index, Color themeColor) {
+    // This is a placeholder for active state, actual logic would depend on how navigation is managed
+    // For now, it's always inactive as navigation pushes new screens.
+    bool isActive = false;
+
+    return Expanded(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            if (isLoading && index != 1)
+              return; // Allow scan even if loading other things
+
             switch (index) {
               case 0:
+                if (addressList.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content:
+                            Text("Scan parcels before optimizing a route.")),
+                  );
+                  return;
+                }
                 Navigator.push(
                     context,
                     MaterialPageRoute(
-                        builder: (context) => OptimizedDeliveryScreen(userEmail: widget.userEmail)));
+                        builder: (context) => OptimizedDeliveryScreen(
+                            userEmail: widget.userEmail)));
                 break;
               case 1:
                 scanParcel();
                 break;
               case 2:
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => MapScreen(userEmail: widget.userEmail)));
+                if (addressList.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(
+                            "No parcels to show on map. Scan some first.")),
+                  );
+                  return;
+                }
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) =>
+                            MapScreen(userEmail: widget.userEmail)));
                 break;
             }
           },
+          borderRadius: BorderRadius.circular(8), // For InkWell splash
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(icon,
+                  color: isActive ? themeColor : Colors.blueGrey[300],
+                  size: 20), // Adjusted size and inactive color
+              SizedBox(height: 3), // Reduced spacing
+              Text(
+                label,
+                style: TextStyle(
+                  color: isActive
+                      ? themeColor
+                      : Colors.blueGrey[400], // Adjusted inactive color
+                  fontSize: 10, // Smaller font for concise look
+                  fontFamily: 'Montserrat',
+                  fontWeight: isActive
+                      ? FontWeight.bold
+                      : FontWeight.normal, // Bolder if active
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
+// Helper class for debouncing text input
+class _DebounceTimer {
+  _DebounceTimer(this.delay, this.callback);
+  final Duration delay;
+  final VoidCallback callback;
+  Timer? _timer;
+  void cancel() => _timer?.cancel();
+}
