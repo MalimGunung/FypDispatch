@@ -654,139 +654,141 @@ class _ParcelScanningState extends State<ParcelScanning> {
         actions: selectionMode
             ? [
                 PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert_rounded, color: Colors.white, size: 26),
-                  tooltip: "More Actions",
+                  icon: Icon(Icons.more_vert, color: Colors.white),
                   onSelected: (value) async {
-                    switch (value) {
-                      case 'select_all_toggle':
-                        setState(() {
-                          if (selectedItems.length == addressList.length && addressList.isNotEmpty) {
-                            selectedItems.clear();
-                          } else if (addressList.isNotEmpty) {
-                            selectedItems = addressList
-                                .map((item) => item["id"].toString())
-                                .toSet();
-                          }
-                        });
-                        break;
-                      case 'mark_complete':
-                        if (selectedItems.isNotEmpty) {
-                          markDeliveriesComplete();
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("No items selected to mark as complete.")),
-                          );
-                        }
-                        break;
-                      case 'delete_selected':
-                        if (selectedItems.isNotEmpty) {
-                          bool? confirmDelete = await showDialog<bool>(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                title: Text("Confirm Deletion", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[800])),
-                                content: Text("Delete ${selectedItems.length} selected parcel(s)? This cannot be undone.", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[600])),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                actions: <Widget>[
-                                  TextButton(
-                                    child: Text("CANCEL", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[500], fontWeight: FontWeight.w600)),
-                                    onPressed: () => Navigator.of(context).pop(false),
-                                  ),
-                                  TextButton(
-                                    child: Text("DELETE", style: TextStyle(fontFamily: 'Montserrat', color: Colors.red.shade600, fontWeight: FontWeight.w600)),
-                                    onPressed: () => Navigator.of(context).pop(true),
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-                          if (confirmDelete == true) {
-                            for (var id in selectedItems) {
-                              await firebaseService.deleteParcel(widget.userEmail, id);
-                            }
-                            fetchStoredAddresses(); // Refreshes list and clears selection internally if needed
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text("✅ ${selectedItems.length} parcel(s) deleted.")),
-                            );
-                             // Ensure selection mode is exited if all items were deleted or as per desired UX
-                            if (addressList.isEmpty || selectedItems.isEmpty) {
-                                setState(() {
-                                    selectionMode = false;
-                                    selectedItems.clear();
-                                });
-                            } else {
-                                // If some items remain, just clear the current selection
-                                setState(() {
-                                    selectedItems.clear();
-                                });
-                            }
-                          }
-                        } else {
-                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("No items selected to delete.")),
-                          );
-                        }
-                        break;
-                      case 'exit_selection':
-                        setState(() {
-                          selectionMode = false;
+                    if (value == 'select_all') {
+                      setState(() {
+                        if (selectedItems.length == addressList.length &&
+                            addressList.isNotEmpty) {
                           selectedItems.clear();
-                        });
-                        break;
+                        } else {
+                          selectedItems = addressList
+                              .map((item) => item["id"].toString())
+                              .toSet();
+                        }
+                      });
+                    } else if (value == 'mark_done') {
+                      if (selectedItems.isNotEmpty) {
+                        markDeliveriesComplete();
+                      }
+                    } else if (value == 'delete') {
+                      if (selectedItems.isNotEmpty) {
+                        bool? confirmDelete = await showDialog<bool>(
+                          context: context,
+                          builder: (BuildContext context) {
+                            return AlertDialog(
+                              title: Text("Confirm Deletion",
+                                  style: TextStyle(
+                                      fontFamily: 'Montserrat',
+                                      color: Colors.blueGrey[800])),
+                              content: Text(
+                                  "Delete ${selectedItems.length} selected parcel(s)? This cannot be undone.",
+                                  style: TextStyle(
+                                      fontFamily: 'Montserrat',
+                                      color: Colors.blueGrey[600])),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(15)),
+                              actions: <Widget>[
+                                TextButton(
+                                  child: Text("CANCEL",
+                                      style: TextStyle(
+                                          fontFamily: 'Montserrat',
+                                          color: Colors.blueGrey[500],
+                                          fontWeight: FontWeight.w600)),
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(false),
+                                ),
+                                TextButton(
+                                  child: Text("DELETE",
+                                      style: TextStyle(
+                                          fontFamily: 'Montserrat',
+                                          color: Colors.red.shade600,
+                                          fontWeight: FontWeight.w600)),
+                                  onPressed: () =>
+                                      Navigator.of(context).pop(true),
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                        if (confirmDelete == true) {
+                          for (var id in selectedItems) {
+                            await firebaseService.deleteParcel(
+                                widget.userEmail, id);
+                          }
+                          setState(() {
+                            selectedItems.clear();
+                            selectionMode = false;
+                          });
+                          fetchStoredAddresses();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text(
+                                    "✅ ${selectedItems.length} parcel(s) deleted.")),
+                          );
+                        }
+                      }
+                    } else if (value == 'cancel_selection') {
+                      setState(() {
+                        selectionMode = false;
+                        selectedItems.clear();
+                      });
                     }
                   },
                   itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                     PopupMenuItem<String>(
-                      value: 'select_all_toggle',
-                      enabled: addressList.isNotEmpty,
+                      value: 'select_all',
                       child: Row(
                         children: [
                           Icon(
-                            selectedItems.length == addressList.length && addressList.isNotEmpty
+                            selectedItems.length == addressList.length &&
+                                    addressList.isNotEmpty
                                 ? Icons.deselect_rounded
                                 : Icons.select_all_rounded,
                             color: Colors.blueGrey[700],
                           ),
                           SizedBox(width: 10),
                           Text(
-                            selectedItems.length == addressList.length && addressList.isNotEmpty
-                                ? "Deselect All"
-                                : "Select All",
-                            style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[700]),
-                          ),
+                              selectedItems.length == addressList.length &&
+                                      addressList.isNotEmpty
+                                  ? "Deselect All"
+                                  : "Select All",
+                              style: TextStyle(fontFamily: 'Montserrat')),
                         ],
                       ),
                     ),
                     PopupMenuItem<String>(
-                      value: 'mark_complete',
+                      value: 'mark_done',
                       enabled: selectedItems.isNotEmpty,
                       child: Row(
                         children: [
-                          Icon(Icons.done_all_sharp, color: Colors.green.shade600),
+                          Icon(Icons.done_all_sharp, color: Colors.green[600]),
                           SizedBox(width: 10),
-                          Text("Mark as Complete", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[700])),
+                          Text("Mark Selected as Complete",
+                              style: TextStyle(fontFamily: 'Montserrat')),
                         ],
                       ),
                     ),
                     PopupMenuItem<String>(
-                      value: 'delete_selected',
+                      value: 'delete',
                       enabled: selectedItems.isNotEmpty,
                       child: Row(
                         children: [
-                          Icon(Icons.delete_forever_outlined, color: Colors.red.shade600),
+                          Icon(Icons.delete_forever_outlined, color: Colors.red[600]),
                           SizedBox(width: 10),
-                          Text("Delete Selected", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[700])),
+                          Text("Delete Selected",
+                              style: TextStyle(fontFamily: 'Montserrat')),
                         ],
                       ),
                     ),
-                    const PopupMenuDivider(),
                     PopupMenuItem<String>(
-                      value: 'exit_selection',
+                      value: 'cancel_selection',
                       child: Row(
                         children: [
-                          Icon(Icons.cancel_outlined, color: Colors.blueGrey[700]),
+                          Icon(Icons.close_fullscreen_outlined, color: Colors.blueGrey[700]),
                           SizedBox(width: 10),
-                          Text("Exit Selection Mode", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[700])),
+                          Text("Cancel Selection",
+                              style: TextStyle(fontFamily: 'Montserrat')),
                         ],
                       ),
                     ),
@@ -794,7 +796,11 @@ class _ParcelScanningState extends State<ParcelScanning> {
                 ),
               ]
             : [
-                // Optional: Refresh button when not in selection mode
+                // IconButton(
+                //   icon: Icon(Icons.sort_rounded, color: Colors.white), // Example: Sort action
+                //   tooltip: "Sort Parcels",
+                //   onPressed: () { /* Implement sort logic */ },
+                // ),
                 IconButton(
                   icon: Icon(Icons.refresh_rounded, color: Colors.white),
                   tooltip: "Refresh List",
@@ -1048,7 +1054,6 @@ class _ParcelScanningState extends State<ParcelScanning> {
       IconData icon, String label, int index, Color themeColor) {
     // This is a placeholder for active state, actual logic would depend on how navigation is managed
     // For now, it's always inactive as navigation pushes new screens.
-    bool isActive = false;
 
     return Expanded(
       child: Material(
@@ -1099,20 +1104,16 @@ class _ParcelScanningState extends State<ParcelScanning> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               Icon(icon,
-                  color: isActive ? themeColor : Colors.blueGrey[300],
+                  color: Colors.blueGrey[300], // isActive is always false
                   size: 20), // Adjusted size and inactive color
               SizedBox(height: 3), // Reduced spacing
               Text(
                 label,
                 style: TextStyle(
-                  color: isActive
-                      ? themeColor
-                      : Colors.blueGrey[400], // Adjusted inactive color
+                  color: Colors.blueGrey[400], // isActive is always false
                   fontSize: 10, // Smaller font for concise look
                   fontFamily: 'Montserrat',
-                  fontWeight: isActive
-                      ? FontWeight.bold
-                      : FontWeight.normal, // Bolder if active
+                  fontWeight: FontWeight.normal, // isActive is always false
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
