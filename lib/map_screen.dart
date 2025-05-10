@@ -409,19 +409,59 @@ class _MapScreenState extends State<MapScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text("Confirm Deletion"),
-        content:
-            Text("Are you sure you want to delete this stop from the list?"),
+        shape: RoundedRectangleBorder( // Added rounded border
+          borderRadius: BorderRadius.circular(22),
+        ),
+        backgroundColor: Colors.white, // Added background color
+        title: Row( // Added Row for icon and text
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange[600], size: 28), // Added icon
+            SizedBox(width: 10),
+            Text(
+              "Confirm Deletion",
+              style: TextStyle( // Styled title
+                color: Colors.blueAccent.shade700,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Montserrat',
+                fontSize: 22,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          "Are you sure you want to delete this stop from the list?",
+          style: TextStyle( // Styled content
+            fontSize: 16,
+            color: Colors.blueGrey[700],
+            fontFamily: 'Montserrat',
+          ),
+        ),
+        actionsPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10), // Added padding
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
+            style: TextButton.styleFrom( // Styled cancel button
+              foregroundColor: Colors.blueAccent.shade700,
+              textStyle: TextStyle(
+                  fontFamily: 'Montserrat', fontWeight: FontWeight.w600),
+            ),
             child: Text("Cancel"),
           ),
-          TextButton(
+          ElevatedButton( // Changed to ElevatedButton for delete
             onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              "Delete",
-              style: TextStyle(color: Colors.red),
+            style: ElevatedButton.styleFrom( // Styled delete button
+              backgroundColor: Colors.red[400],
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              textStyle: TextStyle(
+                  fontFamily: 'Montserrat', fontWeight: FontWeight.bold),
+              elevation: 2,
+            ),
+            child: Padding( // Added padding to button text
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              child: Text("Delete"),
             ),
           ),
         ],
@@ -631,44 +671,145 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
+  void _showStopDetailsDialog(int index) {
+    if (index < 0 || index >= deliveryPoints.length) return;
+
+    final LatLng stopLocation = deliveryPoints[index];
+    final String stopAddress = deliveryAddresses[index];
+    final themeBlue = Colors.blueAccent.shade700;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        title: Row(
+          children: [
+            Icon(Icons.location_on_outlined, color: themeBlue, size: 26),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                "Stop ${index + 1} Details",
+                style: TextStyle(
+                  color: themeBlue,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Montserrat',
+                  fontSize: 18,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: ListBody(
+            children: <Widget>[
+              Text(
+                "Address:",
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Montserrat',
+                    fontSize: 15,
+                    color: Colors.blueGrey[700]),
+              ),
+              SizedBox(height: 4),
+              Text(
+                stopAddress,
+                style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontSize: 14,
+                    color: Colors.blueGrey[600]),
+              ),
+              SizedBox(height: 16),
+              Text(
+                "Coordinates:",
+                style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Montserrat',
+                    fontSize: 15,
+                    color: Colors.blueGrey[700]),
+              ),
+              SizedBox(height: 4),
+              Text(
+                "Latitude: ${stopLocation.latitude.toStringAsFixed(6)}",
+                style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontSize: 14,
+                    color: Colors.blueGrey[600]),
+              ),
+              Text(
+                "Longitude: ${stopLocation.longitude.toStringAsFixed(6)}",
+                style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontSize: 14,
+                    color: Colors.blueGrey[600]),
+              ),
+            ],
+          ),
+        ),
+        actionsPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: TextButton.styleFrom(
+              foregroundColor: themeBlue,
+              textStyle: TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14),
+            ),
+            child: Text("CLOSE"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final themeBlue = Colors.blueAccent.shade700; // Consistent theme color
+
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-        // Add gradient background
-        extendBodyBehindAppBar: true,
+        extendBodyBehindAppBar: true, // Keep true if AppBar is transparent over content
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: Colors.transparent, // Will be covered by flexibleSpace
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_new_rounded,
-                color: const Color.fromARGB(255, 7, 7, 7)),
+            icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 22),
             onPressed: () async {
               if (await _onWillPop()) {
                 Navigator.pop(context);
               }
             },
           ),
-          iconTheme: IconThemeData(color: Colors.blueAccent.shade700),
+          iconTheme: IconThemeData(color: Colors.white), // Ensure icons are visible on gradient
           title: Text(
             "Optimized Delivery Route",
             style: TextStyle(
-              color: Colors.blueAccent.shade700,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
+              color: Colors.white, // White text on gradient
+              fontSize: 19, // Adjusted size
+              fontWeight: FontWeight.w600, // Semi-bold
               fontFamily: 'Montserrat',
             ),
           ),
           centerTitle: true,
+          flexibleSpace: Container( // Gradient background for AppBar
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [themeBlue, Colors.blueAccent.shade400],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
         ),
-        body: Container(
+        body: Container( // Main body gradient
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFFe0eafc), Color(0xFFcfdef3)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+              colors: [Color(0xFFF3F5F9), Color(0xFFE8EFF5)], // Softer gradient
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
           ),
           child: SafeArea(
@@ -676,28 +817,28 @@ class _MapScreenState extends State<MapScreen> {
               children: [
                 // ETA Card
                 Card(
-                  margin: EdgeInsets.all(16),
-                  elevation: 6,
+                  margin: EdgeInsets.fromLTRB(16, 16, 16, 8), // Adjusted margin
+                  elevation: 3, // Subtle elevation
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
+                    borderRadius: BorderRadius.circular(12), // Consistent rounding
+                    side: BorderSide(color: Colors.grey.shade200, width: 0.8),
                   ),
-                  color: Colors.white.withOpacity(0.97),
-                  shadowColor: Colors.blueAccent.withOpacity(0.10),
+                  color: Colors.white, // Solid white
                   child: Padding(
-                    padding: EdgeInsets.all(18),
+                    padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14), // Adjusted padding
                     child: Row(
                       children: [
-                        Icon(Icons.timer,
-                            color: Colors.blueAccent.shade700, size: 28),
-                        SizedBox(width: 10),
+                        Icon(Icons.timer_outlined, // Changed icon
+                            color: themeBlue, size: 26), // Consistent color
+                        SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            "Estimated Time to Next Stop:",
+                            "ETA to Next Stop:", // Simplified text
                             style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 15, // Adjusted size
+                              fontWeight: FontWeight.w500, // Medium weight
                               fontFamily: 'Montserrat',
-                              color: Colors.blueAccent.shade700,
+                              color: Colors.blueGrey[700], // Softer color
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -706,9 +847,9 @@ class _MapScreenState extends State<MapScreen> {
                         Text(
                           estimatedTime,
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green[700],
+                            fontSize: 17, // Adjusted size
+                            fontWeight: FontWeight.w600, // Semi-bold
+                            color: Colors.green.shade700, // Consistent color
                             fontFamily: 'Montserrat',
                           ),
                         ),
@@ -720,10 +861,10 @@ class _MapScreenState extends State<MapScreen> {
                 // Map Section
                 Expanded(
                   flex: 4,
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                  child: Padding( // Add padding around the map container
+                    padding: const EdgeInsets.all(12.0),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(18), // Consistent rounding
                       child: Listener(
                         onPointerDown: (_) {
                           setState(() {
@@ -747,10 +888,17 @@ class _MapScreenState extends State<MapScreen> {
                           markers: markers,
                           polylines: polylines,
                           myLocationEnabled: true,
+                          myLocationButtonEnabled: true, // Enable the button
+                          mapToolbarEnabled: false, // Disable map toolbar for cleaner UI
+                          zoomControlsEnabled: false, // Disable zoom controls
                           onMapCreated: (controller) {
                             setState(() {
                               mapController = controller;
                             });
+                            // Auto-fetch and draw route once map is ready
+                            if (hasStartedDelivery && deliveryPoints.isEmpty) {
+                               fetchDeliveryLocations();
+                            }
                           },
                           onCameraMoveStarted: () {
                             setState(() {
@@ -774,27 +922,27 @@ class _MapScreenState extends State<MapScreen> {
                   flex: 3,
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.97),
+                      color: Colors.white, // Solid white background
                       borderRadius:
-                          BorderRadius.vertical(top: Radius.circular(24)),
+                          BorderRadius.vertical(top: Radius.circular(20)), // Consistent rounding
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.blueAccent.withOpacity(0.10),
-                          blurRadius: 16,
-                          offset: Offset(0, -6),
+                          color: Colors.blueGrey.withOpacity(0.08), // Softer shadow
+                          blurRadius: 12,
+                          offset: Offset(0, -4),
                         ),
                       ],
                     ),
                     child: Column(
                       children: [
                         Padding(
-                          padding: EdgeInsets.all(14),
+                          padding: EdgeInsets.symmetric(vertical: 16, horizontal: 18), // Adjusted padding
                           child: Text(
                             "Delivery Stops",
                             style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blueAccent.shade700,
+                              fontSize: 18, // Adjusted size
+                              fontWeight: FontWeight.w600, // Semi-bold
+                              color: themeBlue, // Consistent theme color
                               fontFamily: 'Montserrat',
                             ),
                           ),
@@ -813,60 +961,71 @@ class _MapScreenState extends State<MapScreen> {
                                 deliveryPoints.insert(newIndex, item);
                                 deliveryAddresses.insert(newIndex, address);
                                 deliveryStatus.insert(newIndex, status);
+                                // After reordering, redraw the ORS route
+                                drawORSRoute();
                               });
                             },
                             children:
                                 List.generate(deliveryPoints.length, (index) {
+                              bool isCompleted = deliveryStatus[index];
                               return Card(
                                 key: ValueKey(deliveryPoints[index]),
+                                elevation: 1.5,
                                 margin: EdgeInsets.symmetric(
-                                    horizontal: 18, vertical: 8),
+                                    horizontal: 16, vertical: 6), // Adjusted margin
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                                  borderRadius: BorderRadius.circular(12), // Consistent rounding
+                                  side: BorderSide(color: Colors.grey.shade200, width: 0.8),
                                 ),
-                                elevation: 4,
-                                shadowColor:
-                                    Colors.blueAccent.withOpacity(0.10),
+                                color: Colors.white,
                                 child: ListTile(
+                                  onTap: () {
+                                    _showStopDetailsDialog(index);
+                                  },
+                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Adjusted padding
                                   leading: Container(
-                                    width: 44,
-                                    height: 44,
+                                    width: 40, // Adjusted size
+                                    height: 40,
                                     decoration: BoxDecoration(
-                                      color: deliveryStatus[index]
-                                          ? Colors.green[100]
-                                          : Colors.blueAccent.withOpacity(0.10),
+                                      color: isCompleted
+                                          ? Colors.green.shade50
+                                          : themeBlue.withOpacity(0.08), // Softer colors
                                       shape: BoxShape.circle,
                                     ),
                                     child: Icon(
-                                      deliveryStatus[index]
-                                          ? Icons.check
-                                          : Icons.directions_car,
-                                      color: deliveryStatus[index]
-                                          ? Colors.green
-                                          : Colors.blueAccent.shade700,
+                                      isCompleted
+                                          ? Icons.check_circle_outline // Changed icon
+                                          : Icons.local_shipping_outlined, // Changed icon
+                                      color: isCompleted
+                                          ? Colors.green.shade600
+                                          : themeBlue,
+                                      size: 22, // Adjusted size
                                     ),
                                   ),
                                   title: Text(
                                     "Stop ${index + 1}",
                                     style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      color: deliveryStatus[index]
-                                          ? Colors.green[800]
-                                          : Colors.blueAccent.shade700,
+                                      fontWeight: FontWeight.w500, // Medium weight
+                                      color: isCompleted
+                                          ? Colors.green.shade800
+                                          : Colors.blueGrey[800], // Softer color
                                       fontFamily: 'Montserrat',
+                                      fontSize: 15, // Adjusted size
                                     ),
                                   ),
                                   subtitle: Text(
                                     deliveryAddresses[index],
                                     style: TextStyle(
-                                      fontSize: 15,
-                                      color: Colors.blueGrey[700],
+                                      fontSize: 13.5, // Adjusted size
+                                      color: Colors.blueGrey[600], // Softer color
                                       fontFamily: 'Montserrat',
                                     ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   trailing: IconButton(
-                                    icon: Icon(Icons.delete,
-                                        color: Colors.red[400]),
+                                    icon: Icon(Icons.delete_outline_rounded, // Changed icon
+                                        color: Colors.red.shade400),
                                     onPressed: () => _deleteStop(index),
                                   ),
                                 ),
@@ -885,53 +1044,53 @@ class _MapScreenState extends State<MapScreen> {
 
         // Bottom Navigation Bar
         bottomNavigationBar: Container(
-          height: 80,
+          height: 70, // Adjusted height
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.97),
+            color: Colors.white, // Solid white
             boxShadow: [
               BoxShadow(
-                color: Colors.blueAccent.withOpacity(0.10),
-                blurRadius: 14,
-                offset: Offset(0, -6),
+                color: Colors.blueGrey.withOpacity(0.1), // Softer shadow
+                blurRadius: 10,
+                offset: Offset(0, -4),
               ),
             ],
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)), // Consistent rounding
           ),
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8), // Added padding
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.center, // Center the button
             children: [
               // 🔵 Navigate Button
               SizedBox(
-                width: 180,
+                width: MediaQuery.of(context).size.width * 0.7, // Responsive width
+                height: 50, // Fixed height
                 child: ElevatedButton.icon(
-                  onPressed: () {
+                  onPressed: (isPaused || deliveryPoints.isEmpty) ? null : () { // Disable if paused or no points
                     if (deliveryPoints.isNotEmpty) {
                       setState(() {
-                        isInNavigationMode = true; // ✅ Trigger auto-navigate
+                        isInNavigationMode = true;
                       });
                       launchGoogleMapsNavigation(deliveryPoints.first);
                     }
                   },
-                  icon: Icon(Icons.navigation, size: 26),
-                  label: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12.0),
-                    child: Text(
-                      "NAVIGATE",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        fontFamily: 'Montserrat',
-                      ),
+                  icon: Icon(Icons.navigation_outlined, size: 24), // Changed icon
+                  label: Text(
+                    "START NAVIGATION", // Updated text
+                    style: TextStyle(
+                      fontSize: 16, // Adjusted size
+                      fontWeight: FontWeight.w600, // Semi-bold
+                      fontFamily: 'Montserrat',
+                      letterSpacing: 0.5,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent.shade700,
+                    backgroundColor: themeBlue, // Consistent theme color
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(12), // Consistent rounding
                     ),
-                    elevation: 6,
-                    shadowColor: Colors.blueAccent.withOpacity(0.22),
+                    elevation: 2, // Subtle elevation
+                    shadowColor: themeBlue.withOpacity(0.2),
                   ),
                 ),
               ),
