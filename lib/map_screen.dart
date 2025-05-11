@@ -29,6 +29,7 @@ class _MapScreenState extends State<MapScreen> {
   List<bool> deliveryStatus = []; // ⬅️ true = completed, false = pending
   bool hasAnimatedToLocation = false;
   bool isInNavigationMode = false;
+  bool _isOptimizingRoute = false; // <-- Add this state variable
 
   List<LatLng> deliveryPoints = [];
   List<String> deliveryAddresses = []; // ⬅️ Store address names for display
@@ -36,8 +37,10 @@ class _MapScreenState extends State<MapScreen> {
   Set<Polyline> polylines = {};
   Position? currentPosition;
 
-  // ✅ Replace with your valid Google API Key
-  String googleApiKey = "AIzaSyCo0_suiw5NmUQf34lGAkfxlJdLvR01NvI";
+  // ORS API Key and Average Speed
+  static const String _orsApiKey = '5b3ce3597851110001cf6248c4f4ec157fda4aa7a289bd1c8e4ef93f'; // Your ORS API Key
+  static const double _averageSpeedKmH = 40.0; // Average speed in km/h
+
   String estimatedTime = "Calculating..."; // ✅ Default ETA text
 
   bool _userInteractingWithMap = false;
@@ -49,9 +52,16 @@ class _MapScreenState extends State<MapScreen> {
   void initState() {
     super.initState();
     hasStartedDelivery = true; // Immediately set to true
-    fetchDeliveryLocations(); // Auto-fetch without needing button
+    // fetchDeliveryLocations(); // Auto-fetch without needing button // Comment out or remove direct call
     // Start a timer to check for interaction timeout
     _startInteractionTimeoutChecker();
+    // Call fetchDeliveryLocations after a short delay to allow map to initialize
+    // and to show initial loading state if desired.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        fetchDeliveryLocations();
+      }
+    });
   }
 
   void _startInteractionTimeoutChecker() {
@@ -77,9 +87,6 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> drawORSRoute() async {
     if (currentPosition == null || deliveryPoints.isEmpty) return;
 
-    final String apiKey =
-        '5b3ce3597851110001cf6248c4f4ec157fda4aa7a289bd1c8e4ef93f';
-
     final coordinates = [
       [currentPosition!.longitude, currentPosition!.latitude],
       ...deliveryPoints.map((p) => [p.longitude, p.latitude])
@@ -95,7 +102,7 @@ class _MapScreenState extends State<MapScreen> {
       Uri.parse(
           'https://api.openrouteservice.org/v2/directions/driving-car/geojson'),
       headers: {
-        "Authorization": apiKey,
+        "Authorization": _orsApiKey, // Use class constant
         "Content-Type": "application/json",
       },
       body: body,
@@ -126,59 +133,43 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> fetchEstimatedTime(LatLng origin, LatLng destination) async {
-    String url =
-        "https://routes.googleapis.com/directions/v2:computeRoutes?key=$googleApiKey";
+    final String orsUrl =
+        'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$_orsApiKey&start=${origin.longitude},${origin.latitude}&end=${destination.longitude},${destination.latitude}';
 
-    Map<String, dynamic> requestBody = {
-      "origin": {
-        "location": {
-          "latLng": {"latitude": origin.latitude, "longitude": origin.longitude}
+    try {
+      final response = await http.get(Uri.parse(orsUrl));
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        // Extract distance from the summary
+        // The summary distance is for the whole route requested (origin to destination)
+        double distanceMeters = data['features'][0]['properties']['summary']['distance'];
+        double distanceKm = distanceMeters / 1000.0;
+
+        double drivingHours = distanceKm / _averageSpeedKmH;
+        int minutes = (drivingHours * 60).round();
+
+        if (mounted) {
+          setState(() {
+            estimatedTime = "$minutes min";
+          });
         }
-      },
-      "destination": {
-        "location": {
-          "latLng": {
-            "latitude": destination.latitude,
-            "longitude": destination.longitude
-          }
+        print("🕒 ORS Estimated Time to Next Stop: $estimatedTime ($distanceKm km)");
+      } else {
+        print("❌ ORS API Error for ETA: ${response.statusCode} - ${response.body}");
+        if (mounted) {
+          setState(() {
+            estimatedTime = "Unknown";
+          });
         }
-      },
-      "travelMode": "DRIVE",
-      "computeAlternativeRoutes": false,
-      "routeModifiers": {
-        "avoidTolls": false,
-        "avoidHighways": false,
-        "avoidFerries": false
-      },
-      "languageCode": "en-US",
-      "units": "METRIC"
-    };
-
-    final response = await http.post(
-      Uri.parse(url),
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": googleApiKey,
-        "X-Goog-FieldMask": "routes.duration",
-      },
-      body: json.encode(requestBody),
-    );
-
-    if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      int durationInSeconds = data["routes"][0]["duration"]["seconds"];
-      int minutes = (durationInSeconds / 60).round();
-
-      setState(() {
-        estimatedTime = "$minutes min";
-      });
-
-      print("🕒 Estimated Time Remaining: $estimatedTime");
-    } else {
-      print("❌ Google Routes API Error: ${response.body}");
-      setState(() {
-        estimatedTime = "Unknown";
-      });
+      }
+    } catch (e) {
+      print("❌ Exception fetching ORS ETA: $e");
+      if (mounted) {
+        setState(() {
+          estimatedTime = "Error";
+        });
+      }
     }
   }
 
@@ -197,20 +188,34 @@ class _MapScreenState extends State<MapScreen> {
 
     print("📍 Distance to next stop: ${distance.toStringAsFixed(2)} meters");
 
-    // ✅ Fetch ETA and update UI
-    fetchEstimatedTime(currentLocation, nextStop);
+    // ✅ Fetch ETA and update UI (this keeps ETA live for the current next stop)
+    if (!_isOptimizingRoute) { // Only fetch if not currently optimizing
+      fetchEstimatedTime(currentLocation, nextStop);
+    }
 
     if (distance < 50) {
       print("✅ Arrived at stop!");
 
+      // Store the index of the completed stop's address for status update
+      // This needs to be done carefully if addresses are directly tied to parcels in Firebase
+      // For now, we assume deliveryStatus corresponds to the order in deliveryPoints
+
       setState(() {
-        deliveryStatus[0] = true; // Mark as completed
+        // deliveryStatus[0] = true; // Mark as completed - This logic might need adjustment
+                                  // if deliveryStatus is tied to original parcel list.
+                                  // For now, we remove it as it's removed with the point.
         deliveryPoints.removeAt(0);
         deliveryAddresses.removeAt(0);
-        deliveryStatus.removeAt(0);
+        deliveryStatus.removeAt(0); // Assumes status list matches points list
       });
 
       if (deliveryPoints.isNotEmpty) {
+        // Immediately fetch ETA for the new next stop
+        if (currentPosition != null) {
+          fetchEstimatedTime(
+              LatLng(currentPosition!.latitude, currentPosition!.longitude),
+              deliveryPoints.first);
+        }
         if (!isPaused && isInNavigationMode) {
           print("🚀 Auto-navigating to next stop...");
           launchGoogleMapsNavigation(deliveryPoints.first);
@@ -279,6 +284,11 @@ class _MapScreenState extends State<MapScreen> {
         distanceFilter: 10,
       ),
     ).listen((Position position) {
+      if (mounted) { // Ensure widget is still mounted before updating state
+        setState(() {
+          currentPosition = position; // Update the class member currentPosition
+        });
+      }
       // ✅ Zoom only if user is not interacting
       if (!_userInteractingWithMap) {
         animateToCurrentLocation(position);
@@ -320,9 +330,18 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> fetchDeliveryLocations() async {
     if (!hasStartedDelivery) return;
 
+    setState(() {
+      _isOptimizingRoute = true; // <-- Set loading state to true
+      estimatedTime = "Optimizing..."; // <-- Update ETA text
+    });
+
     Position? position = await LocationService.getCurrentLocation();
     if (position == null) {
       print("❌ Error: Could not retrieve current location.");
+      setState(() {
+        _isOptimizingRoute = false; // <-- Set loading state to false
+        estimatedTime = "Error";
+      });
       return;
     }
 
@@ -368,21 +387,43 @@ class _MapScreenState extends State<MapScreen> {
 
         for (int i = 0; i < deliveryPoints.length; i++) {
           createNumberedMarker(i + 1, color: Colors.red).then((icon) {
-            setState(() {
-              markers.add(
-                Marker(
-                  markerId: MarkerId((i + 1).toString()),
-                  position: deliveryPoints[i],
-                  icon: icon,
-                  infoWindow: InfoWindow(title: "Stop ${i + 1}"),
-                ),
-              );
-            });
+            // Check if mounted before calling setState
+            if (mounted) {
+              setState(() {
+                markers.add(
+                  Marker(
+                    markerId: MarkerId((i + 1).toString()),
+                    position: deliveryPoints[i],
+                    icon: icon,
+                    infoWindow: InfoWindow(title: "Stop ${i + 1}"),
+                  ),
+                );
+              });
+            }
           });
+        }
+        // Fetch ETA for the first stop if points exist
+        if (deliveryPoints.isNotEmpty && currentPosition != null) {
+          fetchEstimatedTime(
+              LatLng(currentPosition!.latitude, currentPosition!.longitude),
+              deliveryPoints.first);
+        } else {
+          estimatedTime = "N/A";
         }
       });
 
       drawORSRoute(); // ✅ Call this to draw the polyline
+    } else {
+      // No route found, update ETA accordingly
+      setState(() {
+        estimatedTime = "No stops";
+      });
+    }
+    // Ensure _isOptimizingRoute is set to false regardless of outcome
+    if (mounted) {
+      setState(() {
+        _isOptimizingRoute = false; // <-- Set loading state to false
+      });
     }
   }
 
@@ -478,7 +519,24 @@ class _MapScreenState extends State<MapScreen> {
       print("🗑️ Stop removed. Remaining stops: $deliveryPoints");
 
       // 🔄 Automatically update the route after changes
-      updateRouteAfterChanges();
+      if (deliveryPoints.isNotEmpty && currentPosition != null) { // Ensure there are points to route
+        drawORSRoute(); // Call ORS to redraw the route
+      } else {
+        setState(() {
+          polylines.clear(); // Clear polylines if no stops left or no current position
+        });
+      }
+
+      // After deleting and updating route, fetch ETA for the new first stop if any
+      if (deliveryPoints.isNotEmpty && currentPosition != null) {
+        fetchEstimatedTime(
+            LatLng(currentPosition!.latitude, currentPosition!.longitude),
+            deliveryPoints.first);
+      } else if (deliveryPoints.isEmpty) {
+        setState(() {
+          estimatedTime = "No stops"; // Or "N/A"
+        });
+      }
     }
   }
 
@@ -833,7 +891,7 @@ class _MapScreenState extends State<MapScreen> {
                         SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            "ETA to Next Stop:", // Simplified text
+                            _isOptimizingRoute ? "Optimizing Route:" : "ETA to Next Stop:", // Simplified text
                             style: TextStyle(
                               fontSize: 15, // Adjusted size
                               fontWeight: FontWeight.w500, // Medium weight
@@ -844,15 +902,25 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                         ),
                         SizedBox(width: 10),
-                        Text(
-                          estimatedTime,
-                          style: TextStyle(
-                            fontSize: 17, // Adjusted size
-                            fontWeight: FontWeight.w600, // Semi-bold
-                            color: Colors.green.shade700, // Consistent color
-                            fontFamily: 'Montserrat',
-                          ),
-                        ),
+                        _isOptimizingRoute
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.green.shade700),
+                                ),
+                              )
+                            : Text(
+                                estimatedTime,
+                                style: TextStyle(
+                                  fontSize: 17, // Adjusted size
+                                  fontWeight: FontWeight.w600, // Semi-bold
+                                  color: Colors.green.shade700, // Consistent color
+                                  fontFamily: 'Montserrat',
+                                ),
+                              ),
                       ],
                     ),
                   ),
@@ -865,53 +933,81 @@ class _MapScreenState extends State<MapScreen> {
                     padding: const EdgeInsets.all(12.0),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(18), // Consistent rounding
-                      child: Listener(
-                        onPointerDown: (_) {
-                          setState(() {
-                            _userInteractingWithMap = true;
-                            _lastMapInteraction = DateTime.now();
-                          });
-                        },
-                        onPointerUp: (_) {
-                          setState(() {
-                            _lastMapInteraction = DateTime.now();
-                          });
-                        },
-                        child: GoogleMap(
-                          initialCameraPosition: CameraPosition(
-                            target: LatLng(
-                              currentPosition?.latitude ?? 3.1390,
-                              currentPosition?.longitude ?? 101.6869,
+                      child: Stack( // <-- Use Stack to overlay loading indicator
+                        children: [
+                          Listener(
+                            onPointerDown: (_) {
+                              setState(() {
+                                _userInteractingWithMap = true;
+                                _lastMapInteraction = DateTime.now();
+                              });
+                            },
+                            onPointerUp: (_) {
+                              setState(() {
+                                _lastMapInteraction = DateTime.now();
+                              });
+                            },
+                            child: GoogleMap(
+                              initialCameraPosition: CameraPosition(
+                                target: LatLng(
+                                  currentPosition?.latitude ?? 3.1390,
+                                  currentPosition?.longitude ?? 101.6869,
+                                ),
+                                zoom: 12,
+                              ),
+                              markers: markers,
+                              polylines: polylines,
+                              myLocationEnabled: true,
+                              myLocationButtonEnabled: true, // Enable the button
+                              mapToolbarEnabled: false, // Disable map toolbar for cleaner UI
+                              zoomControlsEnabled: false, // Disable zoom controls
+                              onMapCreated: (controller) {
+                                setState(() {
+                                  mapController = controller;
+                                });
+                                // Auto-fetch and draw route once map is ready
+                                // if (hasStartedDelivery && deliveryPoints.isEmpty) {
+                                //    fetchDeliveryLocations(); // Already called in initState or after frame callback
+                                // }
+                              },
+                              onCameraMoveStarted: () {
+                                setState(() {
+                                  _userInteractingWithMap = true;
+                                  _lastMapInteraction = DateTime.now();
+                                });
+                              },
+                              onCameraIdle: () {
+                                setState(() {
+                                  _lastMapInteraction = DateTime.now();
+                                });
+                              },
                             ),
-                            zoom: 12,
                           ),
-                          markers: markers,
-                          polylines: polylines,
-                          myLocationEnabled: true,
-                          myLocationButtonEnabled: true, // Enable the button
-                          mapToolbarEnabled: false, // Disable map toolbar for cleaner UI
-                          zoomControlsEnabled: false, // Disable zoom controls
-                          onMapCreated: (controller) {
-                            setState(() {
-                              mapController = controller;
-                            });
-                            // Auto-fetch and draw route once map is ready
-                            if (hasStartedDelivery && deliveryPoints.isEmpty) {
-                               fetchDeliveryLocations();
-                            }
-                          },
-                          onCameraMoveStarted: () {
-                            setState(() {
-                              _userInteractingWithMap = true;
-                              _lastMapInteraction = DateTime.now();
-                            });
-                          },
-                          onCameraIdle: () {
-                            setState(() {
-                              _lastMapInteraction = DateTime.now();
-                            });
-                          },
-                        ),
+                          if (_isOptimizingRoute) // <-- Show loading overlay
+                            Container(
+                              color: Colors.black.withOpacity(0.3),
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                    SizedBox(height: 15),
+                                    Text(
+                                      "Optimizing delivery route...",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontFamily: 'Montserrat',
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
@@ -948,90 +1044,148 @@ class _MapScreenState extends State<MapScreen> {
                           ),
                         ),
                         Expanded(
-                          child: ReorderableColumn(
-                            onReorder: (int oldIndex, int newIndex) {
-                              setState(() {
-                                if (newIndex > oldIndex) newIndex -= 1;
-                                final item = deliveryPoints.removeAt(oldIndex);
-                                final address =
-                                    deliveryAddresses.removeAt(oldIndex);
-                                final status =
-                                    deliveryStatus.removeAt(oldIndex);
+                          child: _isOptimizingRoute
+                              ? Center( // <-- Show loading indicator for list
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      CircularProgressIndicator(
+                                        valueColor: AlwaysStoppedAnimation<Color>(themeBlue),
+                                      ),
+                                      SizedBox(height: 15),
+                                      Text(
+                                        "Calculating best sequence...",
+                                        style: TextStyle(
+                                          fontSize: 15,
+                                          color: Colors.blueGrey[700],
+                                          fontFamily: 'Montserrat',
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : deliveryPoints.isEmpty
+                                  ? Center( // <-- Show message if no stops
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.map_outlined, size: 48, color: Colors.blueGrey[300]),
+                                          SizedBox(height: 10),
+                                          Text(
+                                            "No delivery stops.",
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 16,
+                                              color: Colors.blueGrey[600],
+                                              fontFamily: 'Montserrat',
+                                            ),
+                                          ),
+                                          SizedBox(height: 5),
+                                          Text(
+                                            "Stops will appear here once optimized.",
+                                            textAlign: TextAlign.center,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.blueGrey[400],
+                                              fontFamily: 'Montserrat',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : ReorderableColumn( // <-- Show list if not loading and has stops
+                                      onReorder: (int oldIndex, int newIndex) {
+                                        setState(() {
+                                          if (newIndex > oldIndex) newIndex -= 1;
+                                          final item = deliveryPoints.removeAt(oldIndex);
+                                          final address =
+                                              deliveryAddresses.removeAt(oldIndex);
+                                          final status =
+                                              deliveryStatus.removeAt(oldIndex);
 
-                                deliveryPoints.insert(newIndex, item);
-                                deliveryAddresses.insert(newIndex, address);
-                                deliveryStatus.insert(newIndex, status);
-                                // After reordering, redraw the ORS route
-                                drawORSRoute();
-                              });
-                            },
-                            children:
-                                List.generate(deliveryPoints.length, (index) {
-                              bool isCompleted = deliveryStatus[index];
-                              return Card(
-                                key: ValueKey(deliveryPoints[index]),
-                                elevation: 1.5,
-                                margin: EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 6), // Adjusted margin
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12), // Consistent rounding
-                                  side: BorderSide(color: Colors.grey.shade200, width: 0.8),
-                                ),
-                                color: Colors.white,
-                                child: ListTile(
-                                  onTap: () {
-                                    _showStopDetailsDialog(index);
-                                  },
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Adjusted padding
-                                  leading: Container(
-                                    width: 40, // Adjusted size
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: isCompleted
-                                          ? Colors.green.shade50
-                                          : themeBlue.withOpacity(0.08), // Softer colors
-                                      shape: BoxShape.circle,
+                                          deliveryPoints.insert(newIndex, item);
+                                          deliveryAddresses.insert(newIndex, address);
+                                          deliveryStatus.insert(newIndex, status);
+                                          // After reordering, redraw the ORS route
+                                          drawORSRoute();
+
+                                          // Fetch ETA for the new first stop
+                                          if (deliveryPoints.isNotEmpty && currentPosition != null) {
+                                            fetchEstimatedTime(
+                                                LatLng(currentPosition!.latitude, currentPosition!.longitude),
+                                                deliveryPoints.first);
+                                          } else if (deliveryPoints.isEmpty) {
+                                            estimatedTime = "No stops";
+                                          }
+                                        });
+                                      },
+                                      children:
+                                          List.generate(deliveryPoints.length, (index) {
+                                        bool isCompleted = deliveryStatus[index];
+                                        return Card(
+                                          key: ValueKey(deliveryPoints[index]),
+                                          elevation: 1.5,
+                                          margin: EdgeInsets.symmetric(
+                                              horizontal: 16, vertical: 6), // Adjusted margin
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(12), // Consistent rounding
+                                            side: BorderSide(color: Colors.grey.shade200, width: 0.8),
+                                          ),
+                                          color: Colors.white,
+                                          child: ListTile(
+                                            onTap: () {
+                                              _showStopDetailsDialog(index);
+                                            },
+                                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Adjusted padding
+                                            leading: Container(
+                                              width: 40, // Adjusted size
+                                              height: 40,
+                                              decoration: BoxDecoration(
+                                                color: isCompleted
+                                                    ? Colors.green.shade50
+                                                    : themeBlue.withOpacity(0.08), // Softer colors
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: Icon(
+                                                isCompleted
+                                                    ? Icons.check_circle_outline // Changed icon
+                                                    : Icons.local_shipping_outlined, // Changed icon
+                                                color: isCompleted
+                                                    ? Colors.green.shade600
+                                                    : themeBlue,
+                                                size: 22, // Adjusted size
+                                              ),
+                                            ),
+                                            title: Text(
+                                              "Stop ${index + 1}",
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w500, // Medium weight
+                                                color: isCompleted
+                                                    ? Colors.green.shade800
+                                                    : Colors.blueGrey[800], // Softer color
+                                                fontFamily: 'Montserrat',
+                                                fontSize: 15, // Adjusted size
+                                              ),
+                                            ),
+                                            subtitle: Text(
+                                              deliveryAddresses[index],
+                                              style: TextStyle(
+                                                fontSize: 13.5, // Adjusted size
+                                                color: Colors.blueGrey[600], // Softer color
+                                                fontFamily: 'Montserrat',
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            trailing: IconButton(
+                                              icon: Icon(Icons.delete_outline_rounded, // Changed icon
+                                                  color: Colors.red.shade400),
+                                              onPressed: () => _deleteStop(index),
+                                            ),
+                                          ),
+                                        );
+                                      }),
                                     ),
-                                    child: Icon(
-                                      isCompleted
-                                          ? Icons.check_circle_outline // Changed icon
-                                          : Icons.local_shipping_outlined, // Changed icon
-                                      color: isCompleted
-                                          ? Colors.green.shade600
-                                          : themeBlue,
-                                      size: 22, // Adjusted size
-                                    ),
-                                  ),
-                                  title: Text(
-                                    "Stop ${index + 1}",
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w500, // Medium weight
-                                      color: isCompleted
-                                          ? Colors.green.shade800
-                                          : Colors.blueGrey[800], // Softer color
-                                      fontFamily: 'Montserrat',
-                                      fontSize: 15, // Adjusted size
-                                    ),
-                                  ),
-                                  subtitle: Text(
-                                    deliveryAddresses[index],
-                                    style: TextStyle(
-                                      fontSize: 13.5, // Adjusted size
-                                      color: Colors.blueGrey[600], // Softer color
-                                      fontFamily: 'Montserrat',
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  trailing: IconButton(
-                                    icon: Icon(Icons.delete_outline_rounded, // Changed icon
-                                        color: Colors.red.shade400),
-                                    onPressed: () => _deleteStop(index),
-                                  ),
-                                ),
-                              );
-                            }),
-                          ),
                         ),
                       ],
                     ),
@@ -1065,7 +1219,7 @@ class _MapScreenState extends State<MapScreen> {
                 width: MediaQuery.of(context).size.width * 0.7, // Responsive width
                 height: 50, // Fixed height
                 child: ElevatedButton.icon(
-                  onPressed: (isPaused || deliveryPoints.isEmpty) ? null : () { // Disable if paused or no points
+                  onPressed: (isPaused || deliveryPoints.isEmpty || _isOptimizingRoute) ? null : () { // Disable if paused, no points, or optimizing
                     if (deliveryPoints.isNotEmpty) {
                       setState(() {
                         isInNavigationMode = true;

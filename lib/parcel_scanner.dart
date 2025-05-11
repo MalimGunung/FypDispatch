@@ -975,7 +975,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                   child: Row(
                                     children: [
                                       Icon(Icons.near_me_outlined,
-                                          size: 14,
+                                          size: 15,
                                           color: Colors.deepPurple
                                               .shade300), // Different icon
                                       SizedBox(width: 5),
@@ -985,12 +985,12 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                             : "Calculating...", // More natural phrasing
                                         style: TextStyle(
                                           color: distance != null
-                                              ? Colors.deepPurple.shade300
-                                              : Colors.blueGrey[
-                                                  300], // Adjusted colors
-                                          fontSize: 12.5, // Adjusted
+                                            ? Colors.deepPurple.shade300
+                                            : Colors.blueGrey[
+                                              300], // Adjusted colors
+                                          fontSize: 14.5, // Adjusted
                                           fontFamily: 'Montserrat',
-                                          fontWeight: FontWeight.w500,
+                                          fontWeight: FontWeight.w900, // Changed from bold
                                         ),
                                       ),
                                     ],

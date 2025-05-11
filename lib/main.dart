@@ -114,6 +114,22 @@ class _HomeScreenState extends State<HomeScreen> {
             color: Color(0xFF2C3E50), // Dark blue-grey color
           ),  
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout, color: Color(0xFF2C3E50)),
+            onPressed: () async {
+              await FirebaseAuth.instance.signOut();
+              // Explicitly navigate to LoginPage and remove all previous routes
+              // This ensures the user is taken to the login screen and cannot navigate back.
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => LoginPage()),
+                (route) => false, // This predicate removes all routes.
+              );
+            },
+            tooltip: 'Logout',
+          ),
+        ],
       ),
       body: Column(
         children: [

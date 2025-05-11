@@ -21,6 +21,7 @@ dependencies:
   firebase_auth: ^5.5.3
   google_sign_in: ^6.3.0
   device_info_plus: ^11.4.0
+  
 
 
 dev_dependencies:

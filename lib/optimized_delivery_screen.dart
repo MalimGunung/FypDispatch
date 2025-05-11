@@ -22,6 +22,10 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
   final AStarRouteOptimizer optimizer = AStarRouteOptimizer();
   Position? currentPosition;
   List<double?> orsDistances = []; // Store ORS distances for each delivery
+  double loadingProgress = 0.0;
+  String loadingMessage = "Initializing...";
+  double _totalDistanceInKm = 0.0;
+  String _estimatedTotalTime = "Calculating...";
 
   @override
   void initState() {
@@ -31,12 +35,31 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
 
   Future<void> fetchDeliveryList() async {
     try {
+      setState(() {
+        isLoading = true;
+        loadingMessage = "Fetching current location...";
+        loadingProgress = 0.1;
+        _totalDistanceInKm = 0.0; // Reset totals
+        _estimatedTotalTime = "Calculating...";
+      });
       currentPosition = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      
+      setState(() {
+        loadingMessage = "Optimizing delivery sequence...";
+        loadingProgress = 0.3;
+      });
       List<Map<String, dynamic>> route =
           await optimizer.getOptimizedDeliverySequence(widget.userEmail);
+      
       List<double?> distances = [];
-      if (currentPosition != null) {
-        for (final delivery in route) {
+      double calculatedTotalDistance = 0.0;
+      if (currentPosition != null && route.isNotEmpty) {
+        for (int i = 0; i < route.length; i++) {
+          final delivery = route[i];
+          setState(() {
+            loadingMessage = "Calculating road distance ${i + 1} of ${route.length}...";
+            loadingProgress = 0.5 + (0.5 * ((i + 1) / route.length));
+          });
           double? dist = await _getORSRoadDistance(
             currentPosition!.latitude,
             currentPosition!.longitude,
@@ -44,17 +67,46 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
             delivery['longitude'],
           );
           distances.add(dist);
+          if (dist != null) {
+            calculatedTotalDistance += dist;
+          }
         }
+      } else if (route.isEmpty) {
+        // If no route, skip distance calculation and complete loading
+        setState(() {
+          loadingProgress = 1.0;
+        });
       }
+
+      // Estimate total time
+      String estimatedTimeStr = "N/A";
+      if (route.isNotEmpty && calculatedTotalDistance > 0) {
+        // Assuming average speed of 40 km/h for driving
+        double drivingHours = calculatedTotalDistance / 40.0;
+        // Assuming 5 minutes per stop
+        double stopMinutes = route.length * 5.0;
+        double totalMinutes = (drivingHours * 60) + stopMinutes;
+
+        int hours = totalMinutes ~/ 60;
+        int minutes = (totalMinutes % 60).round();
+        estimatedTimeStr = "${hours}h ${minutes}m";
+      } else if (route.isNotEmpty && calculatedTotalDistance == 0 && orsDistances.any((d) => d == null)) {
+        estimatedTimeStr = "Partial data"; // If some distances failed
+      }
+
       setState(() {
         deliveryList = route;
         orsDistances = distances;
+        _totalDistanceInKm = calculatedTotalDistance;
+        _estimatedTotalTime = estimatedTimeStr;
         isLoading = false;
+        loadingMessage = "Done!"; // Optional: or clear it
       });
     } catch (e) {
       print("❌ Error fetching delivery list: $e");
       setState(() {
         isLoading = false;
+        loadingMessage = "Error occurred.";
       });
     }
   }
@@ -390,7 +442,6 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
           top: true, // Ensure content is below the AppBar
           child: Column(
             children: [
-              // Removed SizedBox(height: kToolbarHeight + 32) as SafeArea handles it
               Container(
                 margin: EdgeInsets.only(top: 16, bottom: 16, left: 18, right: 18),
                 padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
@@ -425,25 +476,74 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                   ],
                 ),
               ),
+              // Summary Section
+              if (!isLoading && deliveryList.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 0, left: 18, right: 18, bottom: 16), // Adjusted top padding
+                  child: Card(
+                    color: Colors.white, // Change card color to white
+                    elevation: 4, // Slightly increased elevation
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // More rounded corners
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0), // Adjusted padding
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildSummaryItem(Icons.inventory_2_outlined, "${deliveryList.length}", "Parcels", Colors.orange.shade700),
+                          _buildSummaryItem(Icons.route_outlined, "${_totalDistanceInKm.toStringAsFixed(1)} km", "Distance", Colors.green.shade700),
+                          _buildSummaryItem(Icons.timer_outlined, _estimatedTotalTime, "Est. Time", Colors.deepPurple.shade400), // Changed to deepPurple for consistency
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               Expanded(
                 child: isLoading
                     ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent.shade700),
-                            ),
-                            SizedBox(height: 20),
-                            Text(
-                              "Optimizing your route...",
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.blueGrey[700],
-                                fontFamily: 'Montserrat',
+                        child: Padding( // Added padding for the loading indicator
+                          padding: const EdgeInsets.all(32.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                loadingMessage,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.blueGrey[700],
+                                  fontFamily: 'Montserrat',
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
                               ),
-                            ),
-                          ],
+                              SizedBox(height: 20),
+                              LinearProgressIndicator(
+                                value: loadingProgress,
+                                backgroundColor: Colors.blueGrey[200],
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent.shade700),
+                                minHeight: 8, // Make the progress bar thicker
+                              ),
+                              SizedBox(height: 10),
+                              Text(
+                                "${(loadingProgress * 100).toStringAsFixed(0)}%",
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.blueAccent.shade700,
+                                  fontFamily: 'Montserrat',
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 20),
+                              Text( // Kept this as a general message
+                                "Optimizing your route, please wait...",
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  color: Colors.blueGrey[600],
+                                  fontFamily: 'Montserrat',
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
                         ),
                       )
                     : deliveryList.isEmpty
@@ -488,6 +588,7 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                                   ? orsDistances[index]
                                   : null;
                               return Card(
+                                color: Colors.white, // Set card color to white
                                 margin: EdgeInsets.symmetric(vertical: 7),
                                 elevation: 2.5, // Subtle elevation
                                 shadowColor: Colors.blueAccent.withOpacity(0.1),
@@ -603,6 +704,35 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSummaryItem(IconData icon, String value, String label, Color iconColor) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: iconColor, size: 28), // Slightly larger icon
+        SizedBox(height: 6), // Increased spacing
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 17, // Slightly larger font size for value
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Montserrat',
+            color: Colors.blueGrey[900], // Darker color for value
+          ),
+        ),
+        SizedBox(height: 3), // Adjusted spacing
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.5, // Slightly adjusted font size for label
+            fontFamily: 'Montserrat',
+            color: Colors.blueGrey[700], // Medium-dark grey for label
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
     );
   }
 }
