@@ -92,24 +92,51 @@ class AStarRouteOptimizer {
   }
 
   // ✅ Public method to get optimized delivery sequence
-  Future<List<Map<String, dynamic>>> getOptimizedDeliverySequence(String userId) async {
-    List<Map<String, dynamic>> addresses = await firebaseService.getStoredAddresses(userId);
+  Future<List<Map<String, dynamic>>> getOptimizedDeliverySequence(
+    String userId, {
+    List<Map<String, dynamic>>? initialPoints,
+    Position? startPosition,
+  }) async {
+    List<Map<String, dynamic>> addresses;
+    if (initialPoints != null && initialPoints.isNotEmpty) {
+      addresses = List.from(initialPoints); // Use provided points
+    } else if (initialPoints == null) {
+      addresses = await firebaseService.getStoredAddresses(userId); // Fetch from Firebase if not provided
+    } else {
+      return []; // initialPoints is empty list
+    }
+
     if (addresses.isEmpty) return [];
 
-    Position? currentLocation = await LocationService.getCurrentLocation();
-    if (currentLocation == null) return [];
+    Position? effectiveCurrentLocation;
+    if (startPosition != null) {
+      effectiveCurrentLocation = startPosition;
+    } else {
+      effectiveCurrentLocation = await LocationService.getCurrentLocation();
+    }
 
-    double currentLat = currentLocation.latitude;
-    double currentLon = currentLocation.longitude;
+    if (effectiveCurrentLocation == null) {
+      print("❌ Error: Could not determine starting location for optimization.");
+      return []; // Cannot optimize without a starting point
+    }
+
+    double currentLat = effectiveCurrentLocation.latitude;
+    double currentLon = effectiveCurrentLocation.longitude;
 
     List<Map<String, dynamic>> route = [];
 
     while (addresses.isNotEmpty) {
       Map<String, dynamic> nearest = addresses.first;
-      double minDistance = await _getORSRoadDistance(currentLat, currentLon, nearest['latitude'], nearest['longitude']);
+      // Ensure 'latitude' and 'longitude' are treated as doubles
+      double nearestLat = (nearest['latitude'] as num).toDouble();
+      double nearestLon = (nearest['longitude'] as num).toDouble();
+      double minDistance = await _getORSRoadDistance(currentLat, currentLon, nearestLat, nearestLon);
 
       for (var address in addresses) {
-        double distance = await _getORSRoadDistance(currentLat, currentLon, address['latitude'], address['longitude']);
+        // Ensure 'latitude' and 'longitude' are treated as doubles
+        double addressLat = (address['latitude'] as num).toDouble();
+        double addressLon = (address['longitude'] as num).toDouble();
+        double distance = await _getORSRoadDistance(currentLat, currentLon, addressLat, addressLon);
         if (distance < minDistance) {
           minDistance = distance;
           nearest = address;
@@ -117,13 +144,25 @@ class AStarRouteOptimizer {
       }
 
       route.add(nearest);
-      currentLat = nearest['latitude'];
-      currentLon = nearest['longitude'];
+      // Update currentLat and currentLon from the 'nearest' point for the next iteration
+      currentLat = (nearest['latitude'] as num).toDouble();
+      currentLon = (nearest['longitude'] as num).toDouble();
       addresses.remove(nearest);
     }
 
+    if (route.isEmpty) { // Should not happen if initial addresses were not empty, but good check
+        print("📦 No route could be generated.");
+        return [];
+    }
+    
     print("📦 Greedy road-optimized route generated with ${route.length} stops.");
 
+    // If there's only one stop, 2-Opt is not applicable and can cause errors.
+    if (route.length <= 1) {
+      print("✅ Route has 1 or 0 stops, skipping 2-Opt. Final distance (ORS): 0.00 KM (or direct to single stop)");
+      return route;
+    }
+    
     List<Map<String, dynamic>> optimizedRoute = await _applyTwoOpt(route);
 
     double finalDistance = await _totalRouteDistance(optimizedRoute);

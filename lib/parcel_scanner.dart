@@ -1028,7 +1028,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
       ),
       bottomNavigationBar: BottomAppBar(
         elevation: 10, // Standard elevation
-        color: Colors.white, // Solid white for clarity
+        color: Colors.blueAccent.shade700, // Solid white for clarity
         shape: CircularNotchedRectangle(), // Optional: if you plan to add a FAB
         notchMargin: 5.0,
         child: Container(
@@ -1104,13 +1104,13 @@ class _ParcelScanningState extends State<ParcelScanning> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
               Icon(icon,
-                  color: Colors.blueGrey[300], // isActive is always false
+                  color: Colors.white, // isActive is always false
                   size: 20), // Adjusted size and inactive color
               SizedBox(height: 3), // Reduced spacing
               Text(
                 label,
                 style: TextStyle(
-                  color: Colors.blueGrey[400], // isActive is always false
+                  color: Colors.white, // isActive is always false
                   fontSize: 10, // Smaller font for concise look
                   fontFamily: 'Montserrat',
                   fontWeight: FontWeight.normal, // isActive is always false

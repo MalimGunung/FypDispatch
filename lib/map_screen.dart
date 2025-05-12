@@ -374,16 +374,18 @@ class _MapScreenState extends State<MapScreen> {
 
         markers.clear();
 
-        markers.add(
-          Marker(
-            markerId: MarkerId("0"),
-            position:
-                LatLng(currentPosition!.latitude, currentPosition!.longitude),
-            icon:
-                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-            infoWindow: InfoWindow(title: "Start Location"),
-          ),
-        );
+        // Add marker for current position (start of the route)
+        if (currentPosition != null) {
+          markers.add(
+            Marker(
+              markerId: MarkerId("0"), // Start or current location
+              position:
+                  LatLng(currentPosition!.latitude, currentPosition!.longitude),
+              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure), // Differentiate start
+              infoWindow: InfoWindow(title: "Start Location"),
+            ),
+          );
+        }
 
         for (int i = 0; i < deliveryPoints.length; i++) {
           createNumberedMarker(i + 1, color: Colors.red).then((icon) {
@@ -514,27 +516,108 @@ class _MapScreenState extends State<MapScreen> {
         deliveryPoints.removeAt(index);
         deliveryAddresses.removeAt(index);
         deliveryStatus.removeAt(index);
+        // Markers will be updated after re-optimization
       });
 
-      print("🗑️ Stop removed. Remaining stops: $deliveryPoints");
+      print("🗑️ Stop removed. Remaining stops: ${deliveryPoints.length}");
 
-      // 🔄 Automatically update the route after changes
-      if (deliveryPoints.isNotEmpty && currentPosition != null) { // Ensure there are points to route
-        drawORSRoute(); // Call ORS to redraw the route
-      } else {
-        setState(() {
-          polylines.clear(); // Clear polylines if no stops left or no current position
-        });
-      }
-
-      // After deleting and updating route, fetch ETA for the new first stop if any
       if (deliveryPoints.isNotEmpty && currentPosition != null) {
-        fetchEstimatedTime(
-            LatLng(currentPosition!.latitude, currentPosition!.longitude),
-            deliveryPoints.first);
-      } else if (deliveryPoints.isEmpty) {
         setState(() {
-          estimatedTime = "No stops"; // Or "N/A"
+          _isOptimizingRoute = true;
+          estimatedTime = "Re-optimizing...";
+        });
+
+        // Prepare remaining stops for re-optimization
+        List<Map<String, dynamic>> remainingStopsForOptimization = [];
+        for (int i = 0; i < deliveryPoints.length; i++) {
+          remainingStopsForOptimization.add({
+            "latitude": deliveryPoints[i].latitude,
+            "longitude": deliveryPoints[i].longitude,
+            "address": deliveryAddresses[i],
+            // Include other necessary fields if your optimizer uses them, e.g., 'id'
+          });
+        }
+
+        List<Map<String, dynamic>> newOptimizedRoute =
+            await optimizer.getOptimizedDeliverySequence(
+          widget.userEmail, // userId is still needed by the optimizer structure
+          initialPoints: remainingStopsForOptimization,
+          startPosition: currentPosition,
+        );
+
+        if (mounted) {
+          setState(() {
+            if (newOptimizedRoute.isNotEmpty) {
+              deliveryPoints = newOptimizedRoute
+                  .map((address) =>
+                      LatLng(address["latitude"], address["longitude"]))
+                  .toList();
+              deliveryAddresses = newOptimizedRoute
+                  .map((address) => address["address"] as String)
+                  .toList();
+              deliveryStatus =
+                  List.generate(deliveryPoints.length, (_) => false);
+
+              markers.clear();
+              // Add marker for current position
+              markers.add(
+                Marker(
+                  markerId: MarkerId("0"), // Start or current location
+                  position: LatLng(currentPosition!.latitude,
+                      currentPosition!.longitude),
+                  icon: BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueAzure),
+                  infoWindow: InfoWindow(title: "Current Location"),
+                ),
+              );
+
+              // Add markers for new optimized delivery points
+              for (int i = 0; i < deliveryPoints.length; i++) {
+                createNumberedMarker(i + 1, color: Colors.red).then((icon) {
+                  if (mounted) {
+                    setState(() {
+                      markers.add(
+                        Marker(
+                          markerId: MarkerId((i + 1).toString()),
+                          position: deliveryPoints[i],
+                          icon: icon,
+                          infoWindow: InfoWindow(title: "Stop ${i + 1}: ${deliveryAddresses[i]}"),
+                        ),
+                      );
+                    });
+                  }
+                });
+              }
+              
+              drawORSRoute(); // Redraw route with new optimized points
+
+              if (deliveryPoints.isNotEmpty) {
+                fetchEstimatedTime(
+                    LatLng(currentPosition!.latitude, currentPosition!.longitude),
+                    deliveryPoints.first);
+              } else {
+                estimatedTime = "No stops";
+              }
+            } else {
+              // Handle case where re-optimization returns no route (e.g., error)
+              deliveryPoints.clear();
+              deliveryAddresses.clear();
+              deliveryStatus.clear();
+              markers.removeWhere((m) => m.markerId.value != "0"); // Keep current location marker
+              polylines.clear();
+              estimatedTime = "No stops";
+            }
+            _isOptimizingRoute = false;
+          });
+        }
+      } else { // No delivery points left or current position unknown
+        setState(() {
+          polylines.clear();
+          markers.removeWhere((m) => m.markerId.value != "0"); // Keep current location marker if it exists
+           if (deliveryPoints.isEmpty) {
+            estimatedTime = "No stops";
+           }
+          _isOptimizingRoute = false; // Ensure this is reset
         });
       }
     }

@@ -116,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.logout, color: Color(0xFF2C3E50)),
+            icon: Icon(Icons.logout, color: Color.fromARGB(255, 208, 16, 5)),
             onPressed: () async {
               await FirebaseAuth.instance.signOut();
               // Explicitly navigate to LoginPage and remove all previous routes
