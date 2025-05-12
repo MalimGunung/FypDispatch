@@ -37,6 +37,11 @@ dev_dependencies:
   image: ^4.5.2
   geolocator: ^13.0.2
   geocoding: ^3.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_icons:
+  android: true
+  image_path: "assets/Smart Dispatch.jpg"
 
 
 flutter:
