@@ -104,6 +104,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final photoURL = user?.photoURL;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -115,20 +118,122 @@ class _HomeScreenState extends State<HomeScreen> {
           ),  
         ),
         actions: [
-          IconButton(
-            icon: Icon(Icons.logout, color: Color.fromARGB(255, 208, 16, 5)),
-            onPressed: () async {
-              await FirebaseAuth.instance.signOut();
-              // Explicitly navigate to LoginPage and remove all previous routes
-              // This ensures the user is taken to the login screen and cannot navigate back.
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => LoginPage()),
-                (route) => false, // This predicate removes all routes.
-              );
-            },
-            tooltip: 'Logout',
-          ),
+          if (user != null) // Ensure user is not null before showing PopupMenuButton
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0, top: 6.0, bottom: 6.0), // Increased right padding
+              child: PopupMenuButton<String>(
+                offset: const Offset(0, 50), // Slightly increased offset
+                elevation: 3.0, // Add a subtle shadow
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15.0), // Softer corners
+                ),
+                tooltip: "Account options",
+                onSelected: (value) async {
+                  if (value == 'logout') {
+                    await FirebaseAuth.instance.signOut();
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (context) => LoginPage()),
+                      (route) => false,
+                    );
+                  }
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  PopupMenuItem<String>(
+                  enabled: false,
+                  padding: EdgeInsets.zero,
+                  child: Container(
+                    // width: 250, // Removed to allow gradient to fill item width
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                    decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.indigo.shade400, Colors.blue.shade300],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    ),
+                    child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(height: 4), // Reduced top space
+                      CircleAvatar(
+                      radius: 34, // Slightly increased radius for prominence
+                      backgroundImage: photoURL != null ? NetworkImage(photoURL) : null,
+                      backgroundColor: photoURL == null ? Colors.white.withOpacity(0.25) : Colors.transparent,
+                      child: photoURL == null ? Icon(Icons.person_outline, size: 34, color: Colors.white) : null,
+                      ),
+                      SizedBox(height: 14), // Adjusted spacing
+                      if (user.displayName != null && user.displayName!.isNotEmpty)
+                      Text(
+                        user.displayName!,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18, // Slightly increased font size
+                        color: Colors.white,
+                        ),
+                      ),
+                      SizedBox(height: user.displayName != null && user.displayName!.isNotEmpty ? 6 : 0), // Conditional spacing
+                      if (user.email != null)
+                      Text(
+                        user.email!,
+                        textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.9), // Slightly more opaque
+                        ),
+                      ),
+                      SizedBox(height: 10), // Reduced bottom space
+                    ],
+                    ),
+                  ),
+                  ),
+                  const PopupMenuDivider(height: 1),
+                  PopupMenuItem<String>(
+                  value: 'logout',
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0), // Adjusted padding
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                    Icon(Icons.exit_to_app_rounded, color: Colors.red[600], size: 22), // Slightly adjusted color for consistency
+                    SizedBox(width: 14), // Adjusted spacing
+                    Text(
+                      'Logout',
+                      style: TextStyle(
+                      color: Colors.red[700],
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      ),
+                    ),
+                    ],
+                  ),
+                  ),
+                ],
+                child: CircleAvatar( // This is the button child in AppBar
+                  backgroundImage: photoURL != null ? NetworkImage(photoURL) : null,
+                  backgroundColor: photoURL == null ? Colors.grey[200] : null,
+                  child: photoURL == null ? Icon(Icons.person, color: Colors.indigo[600], size: 20) : null,
+                  radius: 20, // Slightly larger avatar in AppBar
+                ),
+              ),
+            )
+          else // Fallback if user is somehow null, though AuthGate should prevent this
+            IconButton(
+              icon: Icon(Icons.login, color: Colors.indigo[700]),
+              onPressed: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => LoginPage()),
+                  (route) => false,
+                );
+              },
+              tooltip: 'Login',
+            ),
         ],
       ),
       body: Column(
@@ -211,39 +316,47 @@ class _HomeScreenState extends State<HomeScreen> {
               return Transform.scale(
                 scale: scale,
                 child: Container(
-                  margin: EdgeInsets.only(bottom: 16),
+                  margin: EdgeInsets.only(bottom: 16, right: 4), // Added right margin for better placement
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.indigo[600],
+                    borderRadius: BorderRadius.circular(16), // Slightly more rounded
+                    gradient: LinearGradient( // Applied gradient
+                      colors: [Colors.indigo.shade500, Colors.indigo.shade700],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.indigo.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: Offset(0, 4),
+                        color: Colors.indigo.withOpacity(0.4), // Enhanced shadow
+                        blurRadius: 12,
+                        offset: Offset(0, 6),
                       ),
                     ],
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12), // Adjusted padding
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: EdgeInsets.all(6),
+                      AnimatedContainer( // Added animation for icon
+                        duration: Duration(milliseconds: 150),
+                        padding: EdgeInsets.all(_isButtonPressed ? 7 : 6),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withOpacity(0.25),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.directions_car,
-                            size: 20, color: Colors.white),
+                        child: Icon(
+                          Icons.directions_car_filled_outlined, // Changed icon
+                          size: _isButtonPressed ? 22 : 20, // Icon size change on press
+                          color: Colors.white,
+                        ),
                       ),
-                      SizedBox(width: 8),
+                      SizedBox(width: 10), // Adjusted spacing
                       Text(
                         "DISPATCH",
                         style: TextStyle(
                           color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                          letterSpacing: 0.8,
+                          fontWeight: FontWeight.bold, // Bolder text
+                          fontSize: 13, // Slightly larger font
+                          letterSpacing: 1.0, // Increased letter spacing
                         ),
                       ),
                     ],

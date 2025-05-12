@@ -15,7 +15,7 @@
     <uses-feature android:name="android.hardware.location.gps"/>
 
     <application
-        android:label="fyp_gemini"
+        android:label="Smart Dispatch"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 

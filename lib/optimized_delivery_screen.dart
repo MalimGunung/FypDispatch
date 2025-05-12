@@ -54,17 +54,31 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
       List<double?> distances = [];
       double calculatedTotalDistance = 0.0;
       if (currentPosition != null && route.isNotEmpty) {
-        for (int i = 0; i < route.length; i++) {
-          final delivery = route[i];
+        setState(() {
+          loadingMessage = "Calculating road distance 1 of ${route.length}...";
+          loadingProgress = 0.5 + (0.5 * (1 / route.length));
+        });
+        double? initialDist = await _getORSRoadDistance(
+          currentPosition!.latitude,
+          currentPosition!.longitude,
+          route[0]['latitude'],
+          route[0]['longitude'],
+        );
+        distances.add(initialDist);
+        if (initialDist != null) {
+          calculatedTotalDistance += initialDist;
+        }
+
+        for (int i = 0; i < route.length - 1; i++) {
           setState(() {
-            loadingMessage = "Calculating road distance ${i + 1} of ${route.length}...";
-            loadingProgress = 0.5 + (0.5 * ((i + 1) / route.length));
+            loadingMessage = "Calculating road distance ${i + 2} of ${route.length}...";
+            loadingProgress = 0.5 + (0.5 * ((i + 2) / route.length));
           });
           double? dist = await _getORSRoadDistance(
-            currentPosition!.latitude,
-            currentPosition!.longitude,
-            delivery['latitude'],
-            delivery['longitude'],
+            route[i]['latitude'],
+            route[i]['longitude'],
+            route[i + 1]['latitude'],
+            route[i + 1]['longitude'],
           );
           distances.add(dist);
           if (dist != null) {
@@ -72,18 +86,14 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
           }
         }
       } else if (route.isEmpty) {
-        // If no route, skip distance calculation and complete loading
         setState(() {
           loadingProgress = 1.0;
         });
       }
 
-      // Estimate total time
       String estimatedTimeStr = "N/A";
       if (route.isNotEmpty && calculatedTotalDistance > 0) {
-        // Assuming average speed of 40 km/h for driving
         double drivingHours = calculatedTotalDistance / 40.0;
-        // Assuming 5 minutes per stop
         double stopMinutes = route.length * 5.0;
         double totalMinutes = (drivingHours * 60) + stopMinutes;
 
@@ -91,7 +101,7 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
         int minutes = (totalMinutes % 60).round();
         estimatedTimeStr = "${hours}h ${minutes}m";
       } else if (route.isNotEmpty && calculatedTotalDistance == 0 && orsDistances.any((d) => d == null)) {
-        estimatedTimeStr = "Partial data"; // If some distances failed
+        estimatedTimeStr = "Partial data";
       }
 
       setState(() {
@@ -100,7 +110,7 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
         _totalDistanceInKm = calculatedTotalDistance;
         _estimatedTotalTime = estimatedTimeStr;
         isLoading = false;
-        loadingMessage = "Done!"; // Optional: or clear it
+        loadingMessage = "Done!";
       });
     } catch (e) {
       print("❌ Error fetching delivery list: $e");
@@ -166,9 +176,18 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
       Map<String, dynamic> delivery, double? distance) {
     final double latitude = delivery["latitude"];
     final double longitude = delivery["longitude"];
+    int index = deliveryList.indexOf(delivery);
+    String distanceLabel = "";
+    if (distance != null) {
+      if (index == 0) {
+        distanceLabel = "From Current Location";
+      } else {
+        distanceLabel = "From Stop $index";
+      }
+    }
     showDialog(
       context: context,
-       barrierDismissible: true, 
+      barrierDismissible: true,
       builder: (context) {
         return Dialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), // Slightly more rounded
@@ -247,26 +266,26 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       clipBehavior: Clip.antiAlias, // Ensures content respects border radius
                       child: GestureDetector(
+                        // Remove AbsorbPointer so the map is interactive and toolbar works
                         onTap: () => _showFullMapDialog(latitude, longitude),
                         child: Container(
                           width: double.infinity,
                           height: 170, // Adjusted height
-                          child: AbsorbPointer( 
-                            child: GoogleMap(
-                              initialCameraPosition: CameraPosition(
-                                target: LatLng(latitude, longitude),
-                                zoom: 15.5, // Slightly more zoom
-                              ),
-                              markers: {
-                                Marker(
-                                  markerId: MarkerId('preview_location'),
-                                  position: LatLng(latitude, longitude),
-                                ),
-                              },
-                              zoomControlsEnabled: false,
-                              myLocationButtonEnabled: false,
-                              liteModeEnabled: true, // Keep lite mode for performance
+                          child: GoogleMap(
+                            initialCameraPosition: CameraPosition(
+                              target: LatLng(latitude, longitude),
+                              zoom: 15.5, // Slightly more zoom
                             ),
+                            markers: {
+                              Marker(
+                                markerId: MarkerId('preview_location'),
+                                position: LatLng(latitude, longitude),
+                              ),
+                            },
+                            zoomControlsEnabled: false,
+                            myLocationButtonEnabled: false,
+                            liteModeEnabled: true, // Keep lite mode for performance
+                            mapToolbarEnabled: true, // Enable Google Map toolbar (directions/map button)
                           ),
                         ),
                       ),
@@ -312,7 +331,7 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                             padding: const EdgeInsets.only(top: 12.0), // Adjusted spacing
                             child: _buildDetailRow(
                               Icons.route_outlined, // Updated icon
-                              "Distance:",
+                              "$distanceLabel:",
                               "${distance.toStringAsFixed(1)} km", 
                               Colors.deepPurple.shade400,
                               isBoldValue: true,
@@ -584,7 +603,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                             itemCount: deliveryList.length,
                             itemBuilder: (context, index) {
                               final delivery = deliveryList[index];
-                              double? distance = (orsDistances.length > index && orsDistances[index] != null)
+                              double? distance = (orsDistances.isNotEmpty &&
+                                      orsDistances.length > index)
                                   ? orsDistances[index]
                                   : null;
                               return Card(
@@ -631,20 +651,20 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  subtitle: distance != null
+                                  subtitle: distance != null && index < orsDistances.length
                                       ? Padding(
                                           padding: const EdgeInsets.only(top: 4.0),
                                           child: Row(
-                                            mainAxisSize: MainAxisSize.min,
                                             children: [
                                               Icon(Icons.directions_car_filled_outlined, size: 16, color: Colors.deepPurple.shade300),
                                               SizedBox(width: 4),
                                               Text(
-                                                "${distance.toStringAsFixed(1)} km",
+                                                index == 0
+                                                    ? "From Current Location: ${distance.toStringAsFixed(1)} km"
+                                                    : "From Stop ${index}: ${distance.toStringAsFixed(1)} km",
                                                 style: TextStyle(
                                                   fontSize: 13.5,
                                                   color: Colors.deepPurple.shade400,
-                                                  fontFamily: 'Montserrat',
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                               ),
