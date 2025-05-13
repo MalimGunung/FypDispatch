@@ -1,6 +1,5 @@
 import 'package:geolocator/geolocator.dart';
 
-
 class LocationService {
   // ✅ Request location permissions at runtime
   static Future<bool> requestPermission() async {
@@ -20,7 +19,8 @@ class LocationService {
       return false;
     }
 
-    return permission == LocationPermission.always || permission == LocationPermission.whileInUse;
+    return permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse;
   }
 
   // ✅ Get current GPS location
@@ -37,7 +37,8 @@ class LocationService {
       position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
-      print("✅ Current Location: Lat: ${position.latitude}, Lon: ${position.longitude}");
+      print(
+          "✅ Current Location: Lat: ${position.latitude}, Lon: ${position.longitude}");
     } catch (e) {
       print("❌ Error getting GPS location: $e");
     }

@@ -29,12 +29,13 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> signInWithGoogle(BuildContext context) async {
     // Add this line to sign out from Google, forcing account selection
-    await GoogleSignIn().signOut(); 
-    
+    await GoogleSignIn().signOut();
+
     final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
     if (googleUser == null) return; // Cancelled
 
-    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+    final GoogleSignInAuthentication googleAuth =
+        await googleUser.authentication;
 
     final credential = GoogleAuthProvider.credential(
       accessToken: googleAuth.accessToken,
@@ -77,10 +78,14 @@ class _LoginPageState extends State<LoginPage> {
 
     return Scaffold(
       // backgroundColor: Colors.grey[50], // Softer background color // Will be overridden by Container's gradient
-      body: Container( // Wrap with a Container for the gradient
+      body: Container(
+        // Wrap with a Container for the gradient
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Colors.deepPurple.shade300, Colors.blue.shade600], // Beautiful purple and blue gradient
+            colors: [
+              Colors.deepPurple.shade300,
+              Colors.blue.shade600
+            ], // Beautiful purple and blue gradient
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -89,15 +94,19 @@ class _LoginPageState extends State<LoginPage> {
           child: SingleChildScrollView(
             padding: EdgeInsets.all(24), // Increased padding
             child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: 400), // Max width for larger screens
+              constraints:
+                  BoxConstraints(maxWidth: 400), // Max width for larger screens
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 28, vertical: 36), // Adjusted padding
+                padding: EdgeInsets.symmetric(
+                    horizontal: 28, vertical: 36), // Adjusted padding
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(24), // Softer border radius
+                  borderRadius:
+                      BorderRadius.circular(24), // Softer border radius
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.15), // Softer, more diffused shadow
+                      color: Colors.grey
+                          .withOpacity(0.15), // Softer, more diffused shadow
                       blurRadius: 30,
                       offset: Offset(0, 10),
                     ),
@@ -141,7 +150,10 @@ class _LoginPageState extends State<LoginPage> {
                       controller: _emailController,
                       decoration: InputDecoration(
                         labelText: "Email Address",
-                        labelStyle: TextStyle(fontFamily: 'Inter', color: themeColor.withOpacity(0.8), fontSize: 14),
+                        labelStyle: TextStyle(
+                            fontFamily: 'Inter',
+                            color: themeColor.withOpacity(0.8),
+                            fontSize: 14),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -152,22 +164,33 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: themeColor, width: 2.0), // Thicker focus border
+                          borderSide: BorderSide(
+                              color: themeColor,
+                              width: 2.0), // Thicker focus border
                         ),
-                        prefixIcon: Icon(Icons.alternate_email_outlined, color: themeColor.withOpacity(0.7), size: 20),
+                        prefixIcon: Icon(Icons.alternate_email_outlined,
+                            color: themeColor.withOpacity(0.7), size: 20),
                         filled: true,
-                        fillColor: Colors.grey[50], // Light fill for text fields
-                        contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 16), // Adjusted padding
+                        fillColor:
+                            Colors.grey[50], // Light fill for text fields
+                        contentPadding: EdgeInsets.symmetric(
+                            vertical: 14, horizontal: 16), // Adjusted padding
                       ),
                       keyboardType: TextInputType.emailAddress,
-                      style: TextStyle(fontFamily: 'Inter', fontSize: 16, color: Colors.black87),
+                      style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 16,
+                          color: Colors.black87),
                     ),
                     SizedBox(height: 18), // Adjusted spacing
                     TextField(
                       controller: _passwordController,
                       decoration: InputDecoration(
                         labelText: "Password",
-                        labelStyle: TextStyle(fontFamily: 'Inter', color: themeColor.withOpacity(0.8), fontSize: 14),
+                        labelStyle: TextStyle(
+                            fontFamily: 'Inter',
+                            color: themeColor.withOpacity(0.8),
+                            fontSize: 14),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.grey.shade300),
@@ -180,33 +203,44 @@ class _LoginPageState extends State<LoginPage> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: themeColor, width: 2.0),
                         ),
-                        prefixIcon: Icon(Icons.lock_outline, color: themeColor.withOpacity(0.7), size: 20),
+                        prefixIcon: Icon(Icons.lock_outline,
+                            color: themeColor.withOpacity(0.7), size: 20),
                         filled: true,
                         fillColor: Colors.grey[50],
-                        contentPadding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                        contentPadding:
+                            EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                       ),
                       obscureText: true,
-                      style: TextStyle(fontFamily: 'Inter', fontSize: 16, color: Colors.black87),
+                      style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 16,
+                          color: Colors.black87),
                     ),
                     SizedBox(height: 28), // Increased spacing
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _loading
-                            ? null
-                            : () => signInWithEmail(context),
+                        onPressed:
+                            _loading ? null : () => signInWithEmail(context),
                         child: _loading
                             ? SizedBox(
                                 width: 20, // Slightly larger progress indicator
                                 height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2.5, color: Colors.white),
                               )
-                            : Text("Login", style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600, fontSize: 16)),
+                            : Text("Login",
+                                style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: themeColor,
                           foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 16), // Increased padding
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          padding: EdgeInsets.symmetric(
+                              vertical: 16), // Increased padding
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                           elevation: 2, // Subtle elevation
                           shadowColor: themeColor.withOpacity(0.3),
                         ),
@@ -218,7 +252,12 @@ class _LoginPageState extends State<LoginPage> {
                         Expanded(child: Divider(color: Colors.grey.shade300)),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
-                          child: Text("OR", style: TextStyle(color: subtleTextColor, fontFamily: 'Inter', fontWeight: FontWeight.w500, fontSize: 13)),
+                          child: Text("OR",
+                              style: TextStyle(
+                                  color: subtleTextColor,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 13)),
                         ),
                         Expanded(child: Divider(color: Colors.grey.shade300)),
                       ],
@@ -228,7 +267,8 @@ class _LoginPageState extends State<LoginPage> {
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () => signInWithGoogle(context),
-                        icon: Image.network( // Consider using a local asset or an SVG icon
+                        icon: Image.network(
+                          // Consider using a local asset or an SVG icon
                           'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/768px-Google_%22G%22_logo.svg.png',
                           height: 20, // Adjusted size
                           width: 20,
@@ -244,12 +284,16 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
-                          foregroundColor: Colors.grey[700], // Darker grey for better contrast
-                          padding: EdgeInsets.symmetric(vertical: 15), // Adjusted padding
+                          foregroundColor: Colors
+                              .grey[700], // Darker grey for better contrast
+                          padding: EdgeInsets.symmetric(
+                              vertical: 15), // Adjusted padding
                           shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
-                              side: BorderSide(color: Colors.grey.shade300, width: 1.5) // Slightly thicker border
-                          ),
+                              side: BorderSide(
+                                  color: Colors.grey.shade300,
+                                  width: 1.5) // Slightly thicker border
+                              ),
                           elevation: 1, // Minimal elevation
                           shadowColor: Colors.grey.withOpacity(0.1),
                         ),

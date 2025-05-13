@@ -42,15 +42,16 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
         _totalDistanceInKm = 0.0; // Reset totals
         _estimatedTotalTime = "Calculating...";
       });
-      currentPosition = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      
+      currentPosition = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+
       setState(() {
         loadingMessage = "Optimizing delivery sequence...";
         loadingProgress = 0.3;
       });
       List<Map<String, dynamic>> route =
           await optimizer.getOptimizedDeliverySequence(widget.userEmail);
-      
+
       List<double?> distances = [];
       double calculatedTotalDistance = 0.0;
       if (currentPosition != null && route.isNotEmpty) {
@@ -71,7 +72,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
 
         for (int i = 0; i < route.length - 1; i++) {
           setState(() {
-            loadingMessage = "Calculating road distance ${i + 2} of ${route.length}...";
+            loadingMessage =
+                "Calculating road distance ${i + 2} of ${route.length}...";
             loadingProgress = 0.5 + (0.5 * ((i + 2) / route.length));
           });
           double? dist = await _getORSRoadDistance(
@@ -100,7 +102,9 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
         int hours = totalMinutes ~/ 60;
         int minutes = (totalMinutes % 60).round();
         estimatedTimeStr = "${hours}h ${minutes}m";
-      } else if (route.isNotEmpty && calculatedTotalDistance == 0 && orsDistances.any((d) => d == null)) {
+      } else if (route.isNotEmpty &&
+          calculatedTotalDistance == 0 &&
+          orsDistances.any((d) => d == null)) {
         estimatedTimeStr = "Partial data";
       }
 
@@ -190,27 +194,31 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
       barrierDismissible: true,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)), // Slightly more rounded
-          insetPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 24), // Adjusted padding
-          backgroundColor: Colors.transparent, // To allow custom background with gradient
-          elevation: 0, // Elevation will be handled by the inner container's shadow
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24)), // Slightly more rounded
+          insetPadding: EdgeInsets.symmetric(
+              horizontal: 16, vertical: 24), // Adjusted padding
+          backgroundColor:
+              Colors.transparent, // To allow custom background with gradient
+          elevation:
+              0, // Elevation will be handled by the inner container's shadow
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: LinearGradient( // Subtle gradient for dialog background
-                colors: [Color(0xFFFDFEFE), Color(0xFFF4F6F9)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: Offset(0, 8),
-                )
-              ]
-            ),
-            child: SingleChildScrollView( 
+                borderRadius: BorderRadius.circular(24),
+                gradient: LinearGradient(
+                  // Subtle gradient for dialog background
+                  colors: [Color(0xFFFDFEFE), Color(0xFFF4F6F9)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: Offset(0, 8),
+                  )
+                ]),
+            child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -218,24 +226,24 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.blueAccent.shade700, // Darker blue for more contrast
-                          Colors.blueAccent.shade400
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius:
-                          BorderRadius.vertical(top: Radius.circular(24)),
-                      boxShadow: [ // Shadow for header
-                        BoxShadow(
-                          color: Colors.blueAccent.withOpacity(0.2),
-                          blurRadius: 10,
-                          offset: Offset(0,4)
-                        )
-                      ]
-                    ),
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.blueAccent
+                                .shade700, // Darker blue for more contrast
+                            Colors.blueAccent.shade400
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius:
+                            BorderRadius.vertical(top: Radius.circular(24)),
+                        boxShadow: [
+                          // Shadow for header
+                          BoxShadow(
+                              color: Colors.blueAccent.withOpacity(0.2),
+                              blurRadius: 10,
+                              offset: Offset(0, 4))
+                        ]),
                     padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     child: Row(
                       children: [
@@ -259,12 +267,15 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                   ),
                   // Map preview with rounded corners
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 8), // Add padding around the map card
+                    padding: const EdgeInsets.fromLTRB(
+                        16, 16, 16, 8), // Add padding around the map card
                     child: Card(
                       elevation: 3,
                       margin: EdgeInsets.zero, // Remove default card margin
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      clipBehavior: Clip.antiAlias, // Ensures content respects border radius
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)),
+                      clipBehavior: Clip
+                          .antiAlias, // Ensures content respects border radius
                       child: GestureDetector(
                         // Remove AbsorbPointer so the map is interactive and toolbar works
                         onTap: () => _showFullMapDialog(latitude, longitude),
@@ -284,8 +295,10 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                             },
                             zoomControlsEnabled: false,
                             myLocationButtonEnabled: false,
-                            liteModeEnabled: true, // Keep lite mode for performance
-                            mapToolbarEnabled: true, // Enable Google Map toolbar (directions/map button)
+                            liteModeEnabled:
+                                true, // Keep lite mode for performance
+                            mapToolbarEnabled:
+                                true, // Enable Google Map toolbar (directions/map button)
                           ),
                         ),
                       ),
@@ -293,18 +306,18 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                   ),
                   // Details section
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 16), // Adjusted padding
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 16), // Adjusted padding
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           delivery["address"],
                           style: TextStyle(
-                            fontWeight: FontWeight.w600, 
-                            fontSize: 17, 
+                            fontWeight: FontWeight.w600,
+                            fontSize: 17,
                             fontFamily: 'Montserrat',
-                            color: Colors.blueGrey[900], 
+                            color: Colors.blueGrey[900],
                           ),
                         ),
                         SizedBox(height: 18), // Increased spacing
@@ -328,11 +341,12 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                         ),
                         if (distance != null)
                           Padding(
-                            padding: const EdgeInsets.only(top: 12.0), // Adjusted spacing
+                            padding: const EdgeInsets.only(
+                                top: 12.0), // Adjusted spacing
                             child: _buildDetailRow(
                               Icons.route_outlined, // Updated icon
                               "$distanceLabel:",
-                              "${distance.toStringAsFixed(1)} km", 
+                              "${distance.toStringAsFixed(1)} km",
                               Colors.deepPurple.shade400,
                               isBoldValue: true,
                             ),
@@ -342,10 +356,15 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                   ),
                   // Close button with themed style
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 20, right: 20, left: 20, top: 12), // Adjusted padding
+                    padding: const EdgeInsets.only(
+                        bottom: 20,
+                        right: 20,
+                        left: 20,
+                        top: 12), // Adjusted padding
                     child: Align(
                       alignment: Alignment.centerRight,
-                      child: ElevatedButton( // Changed to ElevatedButton for a more defined look
+                      child: ElevatedButton(
+                        // Changed to ElevatedButton for a more defined look
                         child: Text(
                           "CLOSE",
                           style: TextStyle(
@@ -360,9 +379,11 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blueAccent.shade400,
                           foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12), // Adjusted padding
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12), // Adjusted padding
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12), // More rounded
+                            borderRadius:
+                                BorderRadius.circular(12), // More rounded
                           ),
                           elevation: 3,
                         ),
@@ -378,17 +399,21 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value, Color iconColor, {bool isBoldValue = false}) {
+  Widget _buildDetailRow(
+      IconData icon, String label, String value, Color iconColor,
+      {bool isBoldValue = false}) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center, // Align items vertically
       children: [
-        Container( // Circular background for icon
+        Container(
+          // Circular background for icon
           padding: EdgeInsets.all(6),
           decoration: BoxDecoration(
             color: iconColor.withOpacity(0.12),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: iconColor, size: 18), // Slightly smaller icon
+          child:
+              Icon(icon, color: iconColor, size: 18), // Slightly smaller icon
         ),
         SizedBox(width: 12), // Increased spacing
         Text(
@@ -401,14 +426,16 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
           ),
         ),
         SizedBox(width: 8),
-        Expanded( 
+        Expanded(
           child: Text(
             value,
             style: TextStyle(
               fontSize: 14.5, // Adjusted font size
               color: Colors.blueGrey[800],
               fontFamily: 'Montserrat',
-              fontWeight: isBoldValue ? FontWeight.bold : FontWeight.w500, // Value can also be semi-bold
+              fontWeight: isBoldValue
+                  ? FontWeight.bold
+                  : FontWeight.w500, // Value can also be semi-bold
             ),
             textAlign: TextAlign.right, // Align value to the right
           ),
@@ -422,7 +449,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        backgroundColor: Colors.transparent, // Keep transparent for gradient body
+        backgroundColor:
+            Colors.transparent, // Keep transparent for gradient body
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
@@ -452,7 +480,10 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFFF0F4F8), Color(0xFFE0EAFC)], // Lighter, cleaner gradient
+            colors: [
+              Color(0xFFF0F4F8),
+              Color(0xFFE0EAFC)
+            ], // Lighter, cleaner gradient
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -462,7 +493,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
           child: Column(
             children: [
               Container(
-                margin: EdgeInsets.only(top: 16, bottom: 16, left: 18, right: 18),
+                margin:
+                    EdgeInsets.only(top: 16, bottom: 16, left: 18, right: 18),
                 padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.8),
@@ -478,7 +510,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.assistant_navigation, color: Colors.blueAccent.shade700, size: 24),
+                    Icon(Icons.assistant_navigation,
+                        color: Colors.blueAccent.shade700, size: 24),
                     SizedBox(width: 10),
                     Expanded(
                       child: Text(
@@ -498,19 +531,39 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
               // Summary Section
               if (!isLoading && deliveryList.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 0, left: 18, right: 18, bottom: 16), // Adjusted top padding
+                  padding: const EdgeInsets.only(
+                      top: 0,
+                      left: 18,
+                      right: 18,
+                      bottom: 16), // Adjusted top padding
                   child: Card(
                     color: Colors.white, // Change card color to white
                     elevation: 4, // Slightly increased elevation
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), // More rounded corners
+                    shape: RoundedRectangleBorder(
+                        borderRadius:
+                            BorderRadius.circular(16)), // More rounded corners
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0), // Adjusted padding
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12.0, vertical: 16.0), // Adjusted padding
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _buildSummaryItem(Icons.inventory_2_outlined, "${deliveryList.length}", "Parcels", Colors.orange.shade700),
-                          _buildSummaryItem(Icons.route_outlined, "${_totalDistanceInKm.toStringAsFixed(1)} km", "Distance", Colors.green.shade700),
-                          _buildSummaryItem(Icons.timer_outlined, _estimatedTotalTime, "Est. Time", Colors.deepPurple.shade400), // Changed to deepPurple for consistency
+                          _buildSummaryItem(
+                                Icons.pin_drop_outlined,
+                              "${deliveryList.length}",
+                              "Addresses",
+                              Colors.orange.shade700),
+                          _buildSummaryItem(
+                              Icons.route_outlined,
+                              "${_totalDistanceInKm.toStringAsFixed(1)} km",
+                              "Distance",
+                              Colors.green.shade700),
+                          _buildSummaryItem(
+                              Icons.timer_outlined,
+                              _estimatedTotalTime,
+                              "Est. Time",
+                              Colors.deepPurple
+                                  .shade400), // Changed to deepPurple for consistency
                         ],
                       ),
                     ),
@@ -519,7 +572,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
               Expanded(
                 child: isLoading
                     ? Center(
-                        child: Padding( // Added padding for the loading indicator
+                        child: Padding(
+                          // Added padding for the loading indicator
                           padding: const EdgeInsets.all(32.0),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -538,7 +592,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                               LinearProgressIndicator(
                                 value: loadingProgress,
                                 backgroundColor: Colors.blueGrey[200],
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.blueAccent.shade700),
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.blueAccent.shade700),
                                 minHeight: 8, // Make the progress bar thicker
                               ),
                               SizedBox(height: 10),
@@ -552,7 +607,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                                 ),
                               ),
                               SizedBox(height: 20),
-                              Text( // Kept this as a general message
+                              Text(
+                                // Kept this as a general message
                                 "Optimizing your route, please wait...",
                                 style: TextStyle(
                                   fontSize: 15,
@@ -572,7 +628,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.map_outlined, size: 60, color: Colors.blueGrey[300]),
+                                  Icon(Icons.map_outlined,
+                                      size: 60, color: Colors.blueGrey[300]),
                                   SizedBox(height: 16),
                                   Text(
                                     "No Deliveries Found",
@@ -599,7 +656,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                             ),
                           )
                         : ListView.builder(
-                            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 8),
                             itemCount: deliveryList.length,
                             itemBuilder: (context, index) {
                               final delivery = deliveryList[index];
@@ -616,13 +674,17 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: ListTile(
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                  contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
                                   leading: Container(
                                     width: 48,
                                     height: 48,
                                     decoration: BoxDecoration(
                                       gradient: LinearGradient(
-                                        colors: [Colors.blueAccent.shade400, Colors.blueAccent.shade700],
+                                        colors: [
+                                          Colors.blueAccent.shade400,
+                                          Colors.blueAccent.shade700
+                                        ],
                                         begin: Alignment.topLeft,
                                         end: Alignment.bottomRight,
                                       ),
@@ -643,7 +705,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                                   title: Text(
                                     delivery["address"],
                                     style: TextStyle(
-                                      fontWeight: FontWeight.w600, // Slightly bolder
+                                      fontWeight:
+                                          FontWeight.w600, // Slightly bolder
                                       fontSize: 15.5,
                                       fontFamily: 'Montserrat',
                                       color: Colors.blueGrey[800],
@@ -651,12 +714,19 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  subtitle: distance != null && index < orsDistances.length
+                                  subtitle: distance != null &&
+                                          index < orsDistances.length
                                       ? Padding(
-                                          padding: const EdgeInsets.only(top: 4.0),
+                                          padding:
+                                              const EdgeInsets.only(top: 4.0),
                                           child: Row(
                                             children: [
-                                              Icon(Icons.directions_car_filled_outlined, size: 16, color: Colors.deepPurple.shade300),
+                                              Icon(
+                                                  Icons
+                                                      .directions_car_filled_outlined,
+                                                  size: 16,
+                                                  color: Colors
+                                                      .deepPurple.shade300),
                                               SizedBox(width: 4),
                                               Text(
                                                 index == 0
@@ -664,7 +734,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                                                     : "From Stop ${index}: ${distance.toStringAsFixed(1)} km",
                                                 style: TextStyle(
                                                   fontSize: 13.5,
-                                                  color: Colors.deepPurple.shade400,
+                                                  color: Colors
+                                                      .deepPurple.shade400,
                                                   fontWeight: FontWeight.w500,
                                                 ),
                                               ),
@@ -678,7 +749,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                                     size: 18,
                                   ),
                                   onTap: () {
-                                    _showLocationDetailDialog(delivery, distance);
+                                    _showLocationDetailDialog(
+                                        delivery, distance);
                                   },
                                 ),
                               );
@@ -686,7 +758,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                           ),
               ),
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 16, 20, 20), // Adjusted padding
+                padding: const EdgeInsets.fromLTRB(
+                    20, 16, 20, 20), // Adjusted padding
                 child: ElevatedButton.icon(
                   icon: Icon(Icons.map_outlined, size: 22),
                   label: Text(
@@ -698,14 +771,17 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                       fontFamily: 'Montserrat',
                     ),
                   ),
-                  onPressed: deliveryList.isEmpty ? null : () { // Disable if list is empty
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) =>
-                              MapScreen(userEmail: widget.userEmail)),
-                    );
-                  },
+                  onPressed: deliveryList.isEmpty
+                      ? null
+                      : () {
+                          // Disable if list is empty
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) =>
+                                    MapScreen(userEmail: widget.userEmail)),
+                          );
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blueAccent.shade700,
                     disabledBackgroundColor: Colors.grey.shade400,
@@ -727,7 +803,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
     );
   }
 
-  Widget _buildSummaryItem(IconData icon, String value, String label, Color iconColor) {
+  Widget _buildSummaryItem(
+      IconData icon, String value, String label, Color iconColor) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [

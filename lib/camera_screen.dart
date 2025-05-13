@@ -43,7 +43,8 @@ class _CameraScreenState extends State<CameraScreen>
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: const Color.fromARGB(255, 7, 7, 7)),
+          icon: Icon(Icons.arrow_back_ios_new_rounded,
+              color: const Color.fromARGB(255, 7, 7, 7)),
           onPressed: () => Navigator.pop(context),
         ),
         centerTitle: true,
@@ -72,14 +73,16 @@ class _CameraScreenState extends State<CameraScreen>
           child: Center(
             child: SingleChildScrollView(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 0),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8.0, vertical: 0),
                 child: Column(
                   children: [
                     SizedBox(height: kToolbarHeight + 8), // Space below AppBar
                     // 🌟 Decorative/Instruction Container below AppBar
                     Container(
                       margin: EdgeInsets.only(bottom: 18),
-                      padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                       decoration: BoxDecoration(
                         color: Colors.blueAccent.withOpacity(0.10),
                         borderRadius: BorderRadius.circular(18),
@@ -94,7 +97,8 @@ class _CameraScreenState extends State<CameraScreen>
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.local_shipping_rounded, color: Colors.blueAccent, size: 22),
+                          Icon(Icons.local_shipping_rounded,
+                              color: Colors.blueAccent, size: 22),
                           SizedBox(width: 10),
                           Expanded(
                             child: Text(
@@ -113,7 +117,8 @@ class _CameraScreenState extends State<CameraScreen>
                     ),
                     SizedBox(height: kToolbarHeight + 18), // Space below AppBar
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 20, vertical: 28),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.97),
                         borderRadius: BorderRadius.circular(28),
@@ -159,9 +164,11 @@ class _CameraScreenState extends State<CameraScreen>
                                   height: 160,
                                   width: 160,
                                   fit: BoxFit.cover,
-                                  loadingBuilder: (context, child, loadingProgress) {
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
                                     if (loadingProgress == null) return child;
-                                    return Center(child: CircularProgressIndicator());
+                                    return Center(
+                                        child: CircularProgressIndicator());
                                   },
                                   errorBuilder: (context, error, stackTrace) {
                                     return Icon(Icons.broken_image,
@@ -202,7 +209,8 @@ class _CameraScreenState extends State<CameraScreen>
                               onPressed: captureImage,
                               icon: Icon(Icons.camera_alt_rounded, size: 26),
                               label: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 14.0),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14.0),
                                 child: Text(
                                   "Capture Image",
                                   style: TextStyle(
@@ -218,7 +226,8 @@ class _CameraScreenState extends State<CameraScreen>
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 elevation: 6,
-                                shadowColor: Colors.blueAccent.withOpacity(0.22),
+                                shadowColor:
+                                    Colors.blueAccent.withOpacity(0.22),
                               ),
                             ),
                           ),
@@ -227,7 +236,8 @@ class _CameraScreenState extends State<CameraScreen>
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.info_outline, color: Colors.blueAccent, size: 20),
+                              Icon(Icons.info_outline,
+                                  color: Colors.blueAccent, size: 20),
                               SizedBox(width: 8),
                               Flexible(
                                 child: Text(

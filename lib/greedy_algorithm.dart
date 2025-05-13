@@ -9,10 +9,12 @@ class AStarRouteOptimizer {
   final FirebaseService firebaseService = FirebaseService();
 
   // ✅ Replace with your ORS API key
-  static const String _orsApiKey = '5b3ce3597851110001cf6248c4f4ec157fda4aa7a289bd1c8e4ef93f';
+  static const String _orsApiKey =
+      '5b3ce3597851110001cf6248c4f4ec157fda4aa7a289bd1c8e4ef93f';
 
   // ✅ Get real road distance using ORS
-  Future<double> _getORSRoadDistance(double lat1, double lon1, double lat2, double lon2) async {
+  Future<double> _getORSRoadDistance(
+      double lat1, double lon1, double lat2, double lon2) async {
     final url =
         'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$_orsApiKey&start=$lon1,$lat1&end=$lon2,$lat2';
 
@@ -20,7 +22,8 @@ class AStarRouteOptimizer {
       final response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        final distanceMeters = data['features'][0]['properties']['segments'][0]['distance'];
+        final distanceMeters =
+            data['features'][0]['properties']['segments'][0]['distance'];
         return distanceMeters / 1000.0; // return in KM
       } else {
         print("❌ ORS API Error: ${response.body}");
@@ -34,13 +37,16 @@ class AStarRouteOptimizer {
   }
 
   // 🧮 Haversine fallback
-  double _calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+  double _calculateDistance(
+      double lat1, double lon1, double lat2, double lon2) {
     const R = 6371; // Earth's radius in KM
     double dLat = (lat2 - lat1) * pi / 180;
     double dLon = (lon2 - lon1) * pi / 180;
     double a = sin(dLat / 2) * sin(dLat / 2) +
-        cos(lat1 * pi / 180) * cos(lat2 * pi / 180) *
-        sin(dLon / 2) * sin(dLon / 2);
+        cos(lat1 * pi / 180) *
+            cos(lat2 * pi / 180) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
     double c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return R * c;
   }
@@ -58,7 +64,8 @@ class AStarRouteOptimizer {
     return total;
   }
 
-  List<Map<String, dynamic>> _twoOptSwap(List<Map<String, dynamic>> route, int i, int k) {
+  List<Map<String, dynamic>> _twoOptSwap(
+      List<Map<String, dynamic>> route, int i, int k) {
     List<Map<String, dynamic>> newRoute = [];
     newRoute.addAll(route.sublist(0, i));
     newRoute.addAll(route.sublist(i, k + 1).reversed);
@@ -66,7 +73,8 @@ class AStarRouteOptimizer {
     return newRoute;
   }
 
-  Future<List<Map<String, dynamic>>> _applyTwoOpt(List<Map<String, dynamic>> route) async {
+  Future<List<Map<String, dynamic>>> _applyTwoOpt(
+      List<Map<String, dynamic>> route) async {
     double bestDistance = await _totalRouteDistance(route);
     List<Map<String, dynamic>> bestRoute = List.from(route);
     bool improved = true;
@@ -101,7 +109,8 @@ class AStarRouteOptimizer {
     if (initialPoints != null && initialPoints.isNotEmpty) {
       addresses = List.from(initialPoints); // Use provided points
     } else if (initialPoints == null) {
-      addresses = await firebaseService.getStoredAddresses(userId); // Fetch from Firebase if not provided
+      addresses = await firebaseService
+          .getStoredAddresses(userId); // Fetch from Firebase if not provided
     } else {
       return []; // initialPoints is empty list
     }
@@ -130,13 +139,15 @@ class AStarRouteOptimizer {
       // Ensure 'latitude' and 'longitude' are treated as doubles
       double nearestLat = (nearest['latitude'] as num).toDouble();
       double nearestLon = (nearest['longitude'] as num).toDouble();
-      double minDistance = await _getORSRoadDistance(currentLat, currentLon, nearestLat, nearestLon);
+      double minDistance = await _getORSRoadDistance(
+          currentLat, currentLon, nearestLat, nearestLon);
 
       for (var address in addresses) {
         // Ensure 'latitude' and 'longitude' are treated as doubles
         double addressLat = (address['latitude'] as num).toDouble();
         double addressLon = (address['longitude'] as num).toDouble();
-        double distance = await _getORSRoadDistance(currentLat, currentLon, addressLat, addressLon);
+        double distance = await _getORSRoadDistance(
+            currentLat, currentLon, addressLat, addressLon);
         if (distance < minDistance) {
           minDistance = distance;
           nearest = address;
@@ -150,23 +161,27 @@ class AStarRouteOptimizer {
       addresses.remove(nearest);
     }
 
-    if (route.isEmpty) { // Should not happen if initial addresses were not empty, but good check
-        print("📦 No route could be generated.");
-        return [];
+    if (route.isEmpty) {
+      // Should not happen if initial addresses were not empty, but good check
+      print("📦 No route could be generated.");
+      return [];
     }
-    
-    print("📦 Greedy road-optimized route generated with ${route.length} stops.");
+
+    print(
+        "📦 Greedy road-optimized route generated with ${route.length} stops.");
 
     // If there's only one stop, 2-Opt is not applicable and can cause errors.
     if (route.length <= 1) {
-      print("✅ Route has 1 or 0 stops, skipping 2-Opt. Final distance (ORS): 0.00 KM (or direct to single stop)");
+      print(
+          "✅ Route has 1 or 0 stops, skipping 2-Opt. Final distance (ORS): 0.00 KM (or direct to single stop)");
       return route;
     }
-    
+
     List<Map<String, dynamic>> optimizedRoute = await _applyTwoOpt(route);
 
     double finalDistance = await _totalRouteDistance(optimizedRoute);
-    print("✅ Final optimized route distance (ORS): ${finalDistance.toStringAsFixed(2)} KM");
+    print(
+        "✅ Final optimized route distance (ORS): ${finalDistance.toStringAsFixed(2)} KM");
 
     return optimizedRoute;
   }

@@ -38,7 +38,8 @@ class _MapScreenState extends State<MapScreen> {
   Position? currentPosition;
 
   // ORS API Key and Average Speed
-  static const String _orsApiKey = '5b3ce3597851110001cf6248c4f4ec157fda4aa7a289bd1c8e4ef93f'; // Your ORS API Key
+  static const String _orsApiKey =
+      '5b3ce3597851110001cf6248c4f4ec157fda4aa7a289bd1c8e4ef93f'; // Your ORS API Key
   static const double _averageSpeedKmH = 40.0; // Average speed in km/h
 
   String estimatedTime = "Calculating..."; // ✅ Default ETA text
@@ -143,7 +144,8 @@ class _MapScreenState extends State<MapScreen> {
         final data = json.decode(response.body);
         // Extract distance from the summary
         // The summary distance is for the whole route requested (origin to destination)
-        double distanceMeters = data['features'][0]['properties']['summary']['distance'];
+        double distanceMeters =
+            data['features'][0]['properties']['summary']['distance'];
         double distanceKm = distanceMeters / 1000.0;
 
         double drivingHours = distanceKm / _averageSpeedKmH;
@@ -154,9 +156,11 @@ class _MapScreenState extends State<MapScreen> {
             estimatedTime = "$minutes min";
           });
         }
-        print("🕒 ORS Estimated Time to Next Stop: $estimatedTime ($distanceKm km)");
+        print(
+            "🕒 ORS Estimated Time to Next Stop: $estimatedTime ($distanceKm km)");
       } else {
-        print("❌ ORS API Error for ETA: ${response.statusCode} - ${response.body}");
+        print(
+            "❌ ORS API Error for ETA: ${response.statusCode} - ${response.body}");
         if (mounted) {
           setState(() {
             estimatedTime = "Unknown";
@@ -189,7 +193,8 @@ class _MapScreenState extends State<MapScreen> {
     print("📍 Distance to next stop: ${distance.toStringAsFixed(2)} meters");
 
     // ✅ Fetch ETA and update UI (this keeps ETA live for the current next stop)
-    if (!_isOptimizingRoute) { // Only fetch if not currently optimizing
+    if (!_isOptimizingRoute) {
+      // Only fetch if not currently optimizing
       fetchEstimatedTime(currentLocation, nextStop);
     }
 
@@ -202,8 +207,8 @@ class _MapScreenState extends State<MapScreen> {
 
       setState(() {
         // deliveryStatus[0] = true; // Mark as completed - This logic might need adjustment
-                                  // if deliveryStatus is tied to original parcel list.
-                                  // For now, we remove it as it's removed with the point.
+        // if deliveryStatus is tied to original parcel list.
+        // For now, we remove it as it's removed with the point.
         deliveryPoints.removeAt(0);
         deliveryAddresses.removeAt(0);
         deliveryStatus.removeAt(0); // Assumes status list matches points list
@@ -262,17 +267,23 @@ class _MapScreenState extends State<MapScreen> {
               Geolocator.distanceBetween(
                 point.latitude,
                 point.longitude,
-                polylines.first.points[polylines.first.points.indexOf(point) - 1]
-                    .latitude,
-                polylines.first.points[polylines.first.points.indexOf(point) - 1]
+                polylines.first
+                    .points[polylines.first.points.indexOf(point) - 1].latitude,
+                polylines
+                    .first
+                    .points[polylines.first.points.indexOf(point) - 1]
                     .longitude,
               );
         });
 
-        int totalTime = DateTime.now().difference(startTime).inMinutes; // Calculate total time
-        int totalAddresses = deliveryStatus.length + 1; // Include the starting point
+        int totalTime = DateTime.now()
+            .difference(startTime)
+            .inMinutes; // Calculate total time
+        int totalAddresses =
+            deliveryStatus.length + 1; // Include the starting point
 
-        await recordRouteSummaryToFirebase(totalDistance / 1000, totalTime, totalAddresses); // Save to Firebase
+        await recordRouteSummaryToFirebase(totalDistance / 1000, totalTime,
+            totalAddresses); // Save to Firebase
       }
     }
   }
@@ -284,7 +295,8 @@ class _MapScreenState extends State<MapScreen> {
         distanceFilter: 10,
       ),
     ).listen((Position position) {
-      if (mounted) { // Ensure widget is still mounted before updating state
+      if (mounted) {
+        // Ensure widget is still mounted before updating state
         setState(() {
           currentPosition = position; // Update the class member currentPosition
         });
@@ -381,7 +393,8 @@ class _MapScreenState extends State<MapScreen> {
               markerId: MarkerId("0"), // Start or current location
               position:
                   LatLng(currentPosition!.latitude, currentPosition!.longitude),
-              icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure), // Differentiate start
+              icon: BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueAzure), // Differentiate start
               infoWindow: InfoWindow(title: "Start Location"),
             ),
           );
@@ -452,17 +465,21 @@ class _MapScreenState extends State<MapScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder( // Added rounded border
+        shape: RoundedRectangleBorder(
+          // Added rounded border
           borderRadius: BorderRadius.circular(22),
         ),
         backgroundColor: Colors.white, // Added background color
-        title: Row( // Added Row for icon and text
+        title: Row(
+          // Added Row for icon and text
           children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.orange[600], size: 28), // Added icon
+            Icon(Icons.warning_amber_rounded,
+                color: Colors.orange[600], size: 28), // Added icon
             SizedBox(width: 10),
             Text(
               "Confirm Deletion",
-              style: TextStyle( // Styled title
+              style: TextStyle(
+                // Styled title
                 color: Colors.blueAccent.shade700,
                 fontWeight: FontWeight.bold,
                 fontFamily: 'Montserrat',
@@ -473,26 +490,31 @@ class _MapScreenState extends State<MapScreen> {
         ),
         content: Text(
           "Are you sure you want to delete this stop from the list?",
-          style: TextStyle( // Styled content
+          style: TextStyle(
+            // Styled content
             fontSize: 16,
             color: Colors.blueGrey[700],
             fontFamily: 'Montserrat',
           ),
         ),
-        actionsPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10), // Added padding
+        actionsPadding:
+            EdgeInsets.symmetric(horizontal: 16, vertical: 10), // Added padding
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            style: TextButton.styleFrom( // Styled cancel button
+            style: TextButton.styleFrom(
+              // Styled cancel button
               foregroundColor: Colors.blueAccent.shade700,
               textStyle: TextStyle(
                   fontFamily: 'Montserrat', fontWeight: FontWeight.w600),
             ),
             child: Text("Cancel"),
           ),
-          ElevatedButton( // Changed to ElevatedButton for delete
+          ElevatedButton(
+            // Changed to ElevatedButton for delete
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom( // Styled delete button
+            style: ElevatedButton.styleFrom(
+              // Styled delete button
               backgroundColor: Colors.red[400],
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
@@ -502,7 +524,8 @@ class _MapScreenState extends State<MapScreen> {
                   fontFamily: 'Montserrat', fontWeight: FontWeight.bold),
               elevation: 2,
             ),
-            child: Padding( // Added padding to button text
+            child: Padding(
+              // Added padding to button text
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               child: Text("Delete"),
             ),
@@ -563,8 +586,8 @@ class _MapScreenState extends State<MapScreen> {
               markers.add(
                 Marker(
                   markerId: MarkerId("0"), // Start or current location
-                  position: LatLng(currentPosition!.latitude,
-                      currentPosition!.longitude),
+                  position: LatLng(
+                      currentPosition!.latitude, currentPosition!.longitude),
                   icon: BitmapDescriptor.defaultMarkerWithHue(
                       BitmapDescriptor.hueAzure),
                   infoWindow: InfoWindow(title: "Current Location"),
@@ -581,19 +604,21 @@ class _MapScreenState extends State<MapScreen> {
                           markerId: MarkerId((i + 1).toString()),
                           position: deliveryPoints[i],
                           icon: icon,
-                          infoWindow: InfoWindow(title: "Stop ${i + 1}: ${deliveryAddresses[i]}"),
+                          infoWindow: InfoWindow(
+                              title: "Stop ${i + 1}: ${deliveryAddresses[i]}"),
                         ),
                       );
                     });
                   }
                 });
               }
-              
+
               drawORSRoute(); // Redraw route with new optimized points
 
               if (deliveryPoints.isNotEmpty) {
                 fetchEstimatedTime(
-                    LatLng(currentPosition!.latitude, currentPosition!.longitude),
+                    LatLng(
+                        currentPosition!.latitude, currentPosition!.longitude),
                     deliveryPoints.first);
               } else {
                 estimatedTime = "No stops";
@@ -603,20 +628,24 @@ class _MapScreenState extends State<MapScreen> {
               deliveryPoints.clear();
               deliveryAddresses.clear();
               deliveryStatus.clear();
-              markers.removeWhere((m) => m.markerId.value != "0"); // Keep current location marker
+              markers.removeWhere((m) =>
+                  m.markerId.value != "0"); // Keep current location marker
               polylines.clear();
               estimatedTime = "No stops";
             }
             _isOptimizingRoute = false;
           });
         }
-      } else { // No delivery points left or current position unknown
+      } else {
+        // No delivery points left or current position unknown
         setState(() {
           polylines.clear();
-          markers.removeWhere((m) => m.markerId.value != "0"); // Keep current location marker if it exists
-           if (deliveryPoints.isEmpty) {
+          markers.removeWhere((m) =>
+              m.markerId.value !=
+              "0"); // Keep current location marker if it exists
+          if (deliveryPoints.isEmpty) {
             estimatedTime = "No stops";
-           }
+          }
           _isOptimizingRoute = false; // Ensure this is reset
         });
       }
@@ -798,7 +827,8 @@ class _MapScreenState extends State<MapScreen> {
     return shouldLeave == true;
   }
 
-  Future<void> recordRouteSummaryToFirebase(double distance, int time, int totalAddresses) async {
+  Future<void> recordRouteSummaryToFirebase(
+      double distance, int time, int totalAddresses) async {
     try {
       await firebaseService.saveRouteSummary(
         widget.userEmail,
@@ -912,19 +942,23 @@ class _MapScreenState extends State<MapScreen> {
     return WillPopScope(
       onWillPop: _onWillPop,
       child: Scaffold(
-        extendBodyBehindAppBar: true, // Keep true if AppBar is transparent over content
+        extendBodyBehindAppBar:
+            true, // Keep true if AppBar is transparent over content
         appBar: AppBar(
-          backgroundColor: Colors.transparent, // Will be covered by flexibleSpace
+          backgroundColor:
+              Colors.transparent, // Will be covered by flexibleSpace
           elevation: 0,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 22),
+            icon: Icon(Icons.arrow_back_ios_new_rounded,
+                color: Colors.white, size: 22),
             onPressed: () async {
               if (await _onWillPop()) {
                 Navigator.pop(context);
               }
             },
           ),
-          iconTheme: IconThemeData(color: Colors.white), // Ensure icons are visible on gradient
+          iconTheme: IconThemeData(
+              color: Colors.white), // Ensure icons are visible on gradient
           title: Text(
             "Optimized Delivery Route",
             style: TextStyle(
@@ -935,7 +969,8 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
           centerTitle: true,
-          flexibleSpace: Container( // Gradient background for AppBar
+          flexibleSpace: Container(
+            // Gradient background for AppBar
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [themeBlue, Colors.blueAccent.shade400],
@@ -945,7 +980,8 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
         ),
-        body: Container( // Main body gradient
+        body: Container(
+          // Main body gradient
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [Color(0xFFF3F5F9), Color(0xFFE8EFF5)], // Softer gradient
@@ -961,20 +997,25 @@ class _MapScreenState extends State<MapScreen> {
                   margin: EdgeInsets.fromLTRB(16, 16, 16, 8), // Adjusted margin
                   elevation: 3, // Subtle elevation
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12), // Consistent rounding
+                    borderRadius:
+                        BorderRadius.circular(12), // Consistent rounding
                     side: BorderSide(color: Colors.grey.shade200, width: 0.8),
                   ),
                   color: Colors.white, // Solid white
                   child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14), // Adjusted padding
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 14), // Adjusted padding
                     child: Row(
                       children: [
                         Icon(Icons.timer_outlined, // Changed icon
-                            color: themeBlue, size: 26), // Consistent color
+                            color: themeBlue,
+                            size: 26), // Consistent color
                         SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            _isOptimizingRoute ? "Optimizing Route:" : "ETA to Next Stop:", // Simplified text
+                            _isOptimizingRoute
+                                ? "Optimizing Route:"
+                                : "ETA to Next Stop:", // Simplified text
                             style: TextStyle(
                               fontSize: 15, // Adjusted size
                               fontWeight: FontWeight.w500, // Medium weight
@@ -1000,7 +1041,8 @@ class _MapScreenState extends State<MapScreen> {
                                 style: TextStyle(
                                   fontSize: 17, // Adjusted size
                                   fontWeight: FontWeight.w600, // Semi-bold
-                                  color: Colors.green.shade700, // Consistent color
+                                  color:
+                                      Colors.green.shade700, // Consistent color
                                   fontFamily: 'Montserrat',
                                 ),
                               ),
@@ -1012,11 +1054,14 @@ class _MapScreenState extends State<MapScreen> {
                 // Map Section
                 Expanded(
                   flex: 4,
-                  child: Padding( // Add padding around the map container
+                  child: Padding(
+                    // Add padding around the map container
                     padding: const EdgeInsets.all(12.0),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(18), // Consistent rounding
-                      child: Stack( // <-- Use Stack to overlay loading indicator
+                      borderRadius:
+                          BorderRadius.circular(18), // Consistent rounding
+                      child: Stack(
+                        // <-- Use Stack to overlay loading indicator
                         children: [
                           Listener(
                             onPointerDown: (_) {
@@ -1041,9 +1086,12 @@ class _MapScreenState extends State<MapScreen> {
                               markers: markers,
                               polylines: polylines,
                               myLocationEnabled: true,
-                              myLocationButtonEnabled: true, // Enable the button
-                              mapToolbarEnabled: false, // Disable map toolbar for cleaner UI
-                              zoomControlsEnabled: false, // Disable zoom controls
+                              myLocationButtonEnabled:
+                                  true, // Enable the button
+                              mapToolbarEnabled:
+                                  false, // Disable map toolbar for cleaner UI
+                              zoomControlsEnabled:
+                                  false, // Disable zoom controls
                               onMapCreated: (controller) {
                                 setState(() {
                                   mapController = controller;
@@ -1074,7 +1122,8 @@ class _MapScreenState extends State<MapScreen> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     CircularProgressIndicator(
-                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white),
                                     ),
                                     SizedBox(height: 15),
                                     Text(
@@ -1102,11 +1151,12 @@ class _MapScreenState extends State<MapScreen> {
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white, // Solid white background
-                      borderRadius:
-                          BorderRadius.vertical(top: Radius.circular(20)), // Consistent rounding
+                      borderRadius: BorderRadius.vertical(
+                          top: Radius.circular(20)), // Consistent rounding
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.blueGrey.withOpacity(0.08), // Softer shadow
+                          color: Colors.blueGrey
+                              .withOpacity(0.08), // Softer shadow
                           blurRadius: 12,
                           offset: Offset(0, -4),
                         ),
@@ -1115,7 +1165,8 @@ class _MapScreenState extends State<MapScreen> {
                     child: Column(
                       children: [
                         Padding(
-                          padding: EdgeInsets.symmetric(vertical: 16, horizontal: 18), // Adjusted padding
+                          padding: EdgeInsets.symmetric(
+                              vertical: 16, horizontal: 18), // Adjusted padding
                           child: Text(
                             "Delivery Stops",
                             style: TextStyle(
@@ -1128,12 +1179,15 @@ class _MapScreenState extends State<MapScreen> {
                         ),
                         Expanded(
                           child: _isOptimizingRoute
-                              ? Center( // <-- Show loading indicator for list
+                              ? Center(
+                                  // <-- Show loading indicator for list
                                   child: Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
                                       CircularProgressIndicator(
-                                        valueColor: AlwaysStoppedAnimation<Color>(themeBlue),
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                themeBlue),
                                       ),
                                       SizedBox(height: 15),
                                       Text(
@@ -1148,11 +1202,15 @@ class _MapScreenState extends State<MapScreen> {
                                   ),
                                 )
                               : deliveryPoints.isEmpty
-                                  ? Center( // <-- Show message if no stops
+                                  ? Center(
+                                      // <-- Show message if no stops
                                       child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
-                                          Icon(Icons.map_outlined, size: 48, color: Colors.blueGrey[300]),
+                                          Icon(Icons.map_outlined,
+                                              size: 48,
+                                              color: Colors.blueGrey[300]),
                                           SizedBox(height: 10),
                                           Text(
                                             "No delivery stops.",
@@ -1176,63 +1234,83 @@ class _MapScreenState extends State<MapScreen> {
                                         ],
                                       ),
                                     )
-                                  : ReorderableColumn( // <-- Show list if not loading and has stops
+                                  : ReorderableColumn(
+                                      // <-- Show list if not loading and has stops
                                       onReorder: (int oldIndex, int newIndex) {
                                         setState(() {
-                                          if (newIndex > oldIndex) newIndex -= 1;
-                                          final item = deliveryPoints.removeAt(oldIndex);
-                                          final address =
-                                              deliveryAddresses.removeAt(oldIndex);
+                                          if (newIndex > oldIndex)
+                                            newIndex -= 1;
+                                          final item =
+                                              deliveryPoints.removeAt(oldIndex);
+                                          final address = deliveryAddresses
+                                              .removeAt(oldIndex);
                                           final status =
                                               deliveryStatus.removeAt(oldIndex);
 
                                           deliveryPoints.insert(newIndex, item);
-                                          deliveryAddresses.insert(newIndex, address);
-                                          deliveryStatus.insert(newIndex, status);
+                                          deliveryAddresses.insert(
+                                              newIndex, address);
+                                          deliveryStatus.insert(
+                                              newIndex, status);
                                           // After reordering, redraw the ORS route
                                           drawORSRoute();
 
                                           // Fetch ETA for the new first stop
-                                          if (deliveryPoints.isNotEmpty && currentPosition != null) {
+                                          if (deliveryPoints.isNotEmpty &&
+                                              currentPosition != null) {
                                             fetchEstimatedTime(
-                                                LatLng(currentPosition!.latitude, currentPosition!.longitude),
+                                                LatLng(
+                                                    currentPosition!.latitude,
+                                                    currentPosition!.longitude),
                                                 deliveryPoints.first);
                                           } else if (deliveryPoints.isEmpty) {
                                             estimatedTime = "No stops";
                                           }
                                         });
                                       },
-                                      children:
-                                          List.generate(deliveryPoints.length, (index) {
-                                        bool isCompleted = deliveryStatus[index];
+                                      children: List.generate(
+                                          deliveryPoints.length, (index) {
+                                        bool isCompleted =
+                                            deliveryStatus[index];
                                         return Card(
                                           key: ValueKey(deliveryPoints[index]),
                                           elevation: 1.5,
                                           margin: EdgeInsets.symmetric(
-                                              horizontal: 16, vertical: 6), // Adjusted margin
+                                              horizontal: 16,
+                                              vertical: 6), // Adjusted margin
                                           shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(12), // Consistent rounding
-                                            side: BorderSide(color: Colors.grey.shade200, width: 0.8),
+                                            borderRadius: BorderRadius.circular(
+                                                12), // Consistent rounding
+                                            side: BorderSide(
+                                                color: Colors.grey.shade200,
+                                                width: 0.8),
                                           ),
                                           color: Colors.white,
                                           child: ListTile(
                                             onTap: () {
                                               _showStopDetailsDialog(index);
                                             },
-                                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8), // Adjusted padding
+                                            contentPadding:
+                                                EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical:
+                                                        8), // Adjusted padding
                                             leading: Container(
                                               width: 40, // Adjusted size
                                               height: 40,
                                               decoration: BoxDecoration(
                                                 color: isCompleted
                                                     ? Colors.green.shade50
-                                                    : themeBlue.withOpacity(0.08), // Softer colors
+                                                    : themeBlue.withOpacity(
+                                                        0.08), // Softer colors
                                                 shape: BoxShape.circle,
                                               ),
                                               child: Icon(
                                                 isCompleted
-                                                    ? Icons.check_circle_outline // Changed icon
-                                                    : Icons.local_shipping_outlined, // Changed icon
+                                                    ? Icons
+                                                        .check_circle_outline // Changed icon
+                                                    : Icons
+                                                        .local_shipping_outlined, // Changed icon
                                                 color: isCompleted
                                                     ? Colors.green.shade600
                                                     : themeBlue,
@@ -1242,10 +1320,12 @@ class _MapScreenState extends State<MapScreen> {
                                             title: Text(
                                               "Stop ${index + 1}",
                                               style: TextStyle(
-                                                fontWeight: FontWeight.w500, // Medium weight
+                                                fontWeight: FontWeight
+                                                    .w500, // Medium weight
                                                 color: isCompleted
                                                     ? Colors.green.shade800
-                                                    : Colors.blueGrey[800], // Softer color
+                                                    : Colors.blueGrey[
+                                                        800], // Softer color
                                                 fontFamily: 'Montserrat',
                                                 fontSize: 15, // Adjusted size
                                               ),
@@ -1254,16 +1334,20 @@ class _MapScreenState extends State<MapScreen> {
                                               deliveryAddresses[index],
                                               style: TextStyle(
                                                 fontSize: 13.5, // Adjusted size
-                                                color: Colors.blueGrey[600], // Softer color
+                                                color: Colors.blueGrey[
+                                                    600], // Softer color
                                                 fontFamily: 'Montserrat',
                                               ),
                                               maxLines: 2,
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                             trailing: IconButton(
-                                              icon: Icon(Icons.delete_outline_rounded, // Changed icon
+                                              icon: Icon(
+                                                  Icons
+                                                      .delete_outline_rounded, // Changed icon
                                                   color: Colors.red.shade400),
-                                              onPressed: () => _deleteStop(index),
+                                              onPressed: () =>
+                                                  _deleteStop(index),
                                             ),
                                           ),
                                         );
@@ -1291,26 +1375,35 @@ class _MapScreenState extends State<MapScreen> {
                 offset: Offset(0, -4),
               ),
             ],
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)), // Consistent rounding
+            borderRadius: BorderRadius.vertical(
+                top: Radius.circular(16)), // Consistent rounding
           ),
-          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8), // Added padding
+          padding: EdgeInsets.symmetric(
+              horizontal: 20, vertical: 8), // Added padding
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center, // Center the button
             children: [
               // 🔵 Navigate Button
               SizedBox(
-                width: MediaQuery.of(context).size.width * 0.7, // Responsive width
+                width:
+                    MediaQuery.of(context).size.width * 0.7, // Responsive width
                 height: 50, // Fixed height
                 child: ElevatedButton.icon(
-                  onPressed: (isPaused || deliveryPoints.isEmpty || _isOptimizingRoute) ? null : () { // Disable if paused, no points, or optimizing
-                    if (deliveryPoints.isNotEmpty) {
-                      setState(() {
-                        isInNavigationMode = true;
-                      });
-                      launchGoogleMapsNavigation(deliveryPoints.first);
-                    }
-                  },
-                  icon: Icon(Icons.navigation_outlined, size: 24), // Changed icon
+                  onPressed: (isPaused ||
+                          deliveryPoints.isEmpty ||
+                          _isOptimizingRoute)
+                      ? null
+                      : () {
+                          // Disable if paused, no points, or optimizing
+                          if (deliveryPoints.isNotEmpty) {
+                            setState(() {
+                              isInNavigationMode = true;
+                            });
+                            launchGoogleMapsNavigation(deliveryPoints.first);
+                          }
+                        },
+                  icon:
+                      Icon(Icons.navigation_outlined, size: 24), // Changed icon
                   label: Text(
                     "START NAVIGATION", // Updated text
                     style: TextStyle(
@@ -1324,7 +1417,8 @@ class _MapScreenState extends State<MapScreen> {
                     backgroundColor: themeBlue, // Consistent theme color
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12), // Consistent rounding
+                      borderRadius:
+                          BorderRadius.circular(12), // Consistent rounding
                     ),
                     elevation: 2, // Subtle elevation
                     shadowColor: themeBlue.withOpacity(0.2),

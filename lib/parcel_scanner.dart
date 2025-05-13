@@ -124,6 +124,123 @@ class _ParcelScanningState extends State<ParcelScanning> {
           SnackBar(
               content: Text("❌ No valid address detected. Please try again.")),
         );
+        setState(() => isLoading = false); // Hide loader
+        return;
+      }
+
+      // Check for duplicate address
+      final trimmedNewAddress = address.trim().toLowerCase();
+      bool isDuplicate = addressList.any((existingAddress) =>
+          existingAddress["address"].toString().trim().toLowerCase() ==
+          trimmedNewAddress);
+
+      if (isDuplicate) {
+        setState(() => isLoading = false); // Hide loader before showing dialog
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.0),
+              ),
+              backgroundColor: Color(0xFFFDFEFE), // Light background
+              titlePadding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 0.0),
+              contentPadding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 24.0),
+              actionsPadding: const EdgeInsets.fromLTRB(24.0, 0.0, 24.0, 16.0),
+              title: Row(
+                children: [
+                  Icon(
+                    Icons.copy_all_outlined, // Changed icon
+                    color: Colors.orange.shade600, // Slightly softer orange
+                    size: 26,
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    "Duplicate Parcel", // More concise
+                    style: TextStyle(
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.w600, // Semi-bold
+                      fontSize: 18,
+                      color: Colors.blueGrey[800], // Darker for contrast
+                    ),
+                  ),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min, // Important for content sizing
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "This parcel address already exists in your list:",
+                    style: TextStyle(
+                      fontFamily: 'Montserrat',
+                      fontSize: 14,
+                      color: Colors.blueGrey[600], // Softer text color
+                      height: 1.5,
+                    ),
+                  ),
+                  SizedBox(height: 12),
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color:
+                          Colors.orange.withOpacity(0.05), // Subtle highlight
+                      borderRadius: BorderRadius.circular(8),
+                      border:
+                          Border.all(color: Colors.orange.shade100, width: 1),
+                    ),
+                    child: Text(
+                      "\"$address\"",
+                      style: TextStyle(
+                        fontFamily: 'Montserrat',
+                        fontSize: 14,
+                        color: Colors.orange.shade800, // Emphasize address
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
+                      ),
+                      textAlign: TextAlign.center, // Center the address
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    "Please scan a different parcel or check your existing list.",
+                    style: TextStyle(
+                      fontFamily: 'Montserrat',
+                      fontSize: 14,
+                      color: Colors.blueGrey[600],
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+              actions: <Widget>[
+                TextButton(
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    backgroundColor:
+                        Colors.blueAccent.shade700.withOpacity(0.1),
+                  ),
+                  child: Text(
+                    "GOT IT", // More modern CTA
+                    style: TextStyle(
+                      fontFamily: 'Montserrat',
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blueAccent.shade700, // Theme color
+                      fontSize: 14,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            );
+          },
+        );
         return;
       }
 
@@ -735,7 +852,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
                       });
                     }
                   },
-                  itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  itemBuilder: (BuildContext context) =>
+                      <PopupMenuEntry<String>>[
                     PopupMenuItem<String>(
                       value: 'select_all',
                       child: Row(
@@ -774,7 +892,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
                       enabled: selectedItems.isNotEmpty,
                       child: Row(
                         children: [
-                          Icon(Icons.delete_forever_outlined, color: Colors.red[600]),
+                          Icon(Icons.delete_forever_outlined,
+                              color: Colors.red[600]),
                           SizedBox(width: 10),
                           Text("Delete Selected",
                               style: TextStyle(fontFamily: 'Montserrat')),
@@ -785,7 +904,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
                       value: 'cancel_selection',
                       child: Row(
                         children: [
-                          Icon(Icons.close_fullscreen_outlined, color: Colors.blueGrey[700]),
+                          Icon(Icons.close_fullscreen_outlined,
+                              color: Colors.blueGrey[700]),
                           SizedBox(width: 10),
                           Text("Cancel Selection",
                               style: TextStyle(fontFamily: 'Montserrat')),
@@ -985,12 +1105,13 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                             : "Calculating...", // More natural phrasing
                                         style: TextStyle(
                                           color: distance != null
-                                            ? Colors.deepPurple.shade300
-                                            : Colors.blueGrey[
-                                              300], // Adjusted colors
+                                              ? Colors.deepPurple.shade300
+                                              : Colors.blueGrey[
+                                                  300], // Adjusted colors
                                           fontSize: 14.5, // Adjusted
                                           fontFamily: 'Montserrat',
-                                          fontWeight: FontWeight.w900, // Changed from bold
+                                          fontWeight: FontWeight
+                                              .w900, // Changed from bold
                                         ),
                                       ),
                                     ],

@@ -78,7 +78,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> fetchRouteSummary() async {
     try {
-      final summary = await firebaseService.getRouteSummary(FirebaseAuth.instance.currentUser?.email);
+      final summary = await firebaseService
+          .getRouteSummary(FirebaseAuth.instance.currentUser?.email);
       setState(() {
         routeSummary = summary;
       });
@@ -89,7 +90,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> fetchAllRoutes() async {
     try {
-      final routes = await firebaseService.getAllRoutes(FirebaseAuth.instance.currentUser?.email);
+      final routes = await firebaseService
+          .getAllRoutes(FirebaseAuth.instance.currentUser?.email);
       setState(() {
         allRoutes = routes;
       });
@@ -115,12 +117,16 @@ class _HomeScreenState extends State<HomeScreen> {
             fontSize: 28,
             fontWeight: FontWeight.w800,
             color: Color(0xFF2C3E50), // Dark blue-grey color
-          ),  
+          ),
         ),
         actions: [
-          if (user != null) // Ensure user is not null before showing PopupMenuButton
+          if (user !=
+              null) // Ensure user is not null before showing PopupMenuButton
             Padding(
-              padding: const EdgeInsets.only(right: 16.0, top: 6.0, bottom: 6.0), // Increased right padding
+              padding: const EdgeInsets.only(
+                  right: 16.0,
+                  top: 6.0,
+                  bottom: 6.0), // Increased right padding
               child: PopupMenuButton<String>(
                 offset: const Offset(0, 50), // Slightly increased offset
                 elevation: 3.0, // Add a subtle shadow
@@ -140,84 +146,110 @@ class _HomeScreenState extends State<HomeScreen> {
                 },
                 itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                   PopupMenuItem<String>(
-                  enabled: false,
-                  padding: EdgeInsets.zero,
-                  child: Container(
-                    // width: 250, // Removed to allow gradient to fill item width
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-                    decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Colors.indigo.shade400, Colors.blue.shade300],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    ),
-                    child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      SizedBox(height: 4), // Reduced top space
-                      CircleAvatar(
-                      radius: 34, // Slightly increased radius for prominence
-                      backgroundImage: photoURL != null ? NetworkImage(photoURL) : null,
-                      backgroundColor: photoURL == null ? Colors.white.withOpacity(0.25) : Colors.transparent,
-                      child: photoURL == null ? Icon(Icons.person_outline, size: 34, color: Colors.white) : null,
-                      ),
-                      SizedBox(height: 14), // Adjusted spacing
-                      if (user.displayName != null && user.displayName!.isNotEmpty)
-                      Text(
-                        user.displayName!,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18, // Slightly increased font size
-                        color: Colors.white,
+                    enabled: false,
+                    padding: EdgeInsets.zero,
+                    child: Container(
+                      // width: 250, // Removed to allow gradient to fill item width
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0, vertical: 16.0),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.indigo.shade400,
+                            Colors.blue.shade300
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
                       ),
-                      SizedBox(height: user.displayName != null && user.displayName!.isNotEmpty ? 6 : 0), // Conditional spacing
-                      if (user.email != null)
-                      Text(
-                        user.email!,
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white.withOpacity(0.9), // Slightly more opaque
-                        ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          SizedBox(height: 4), // Reduced top space
+                          CircleAvatar(
+                            radius:
+                                34, // Slightly increased radius for prominence
+                            backgroundImage: photoURL != null
+                                ? NetworkImage(photoURL)
+                                : null,
+                            backgroundColor: photoURL == null
+                                ? Colors.white.withOpacity(0.25)
+                                : Colors.transparent,
+                            child: photoURL == null
+                                ? Icon(Icons.person_outline,
+                                    size: 34, color: Colors.white)
+                                : null,
+                          ),
+                          SizedBox(height: 14), // Adjusted spacing
+                          if (user.displayName != null &&
+                              user.displayName!.isNotEmpty)
+                            Text(
+                              user.displayName!,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18, // Slightly increased font size
+                                color: Colors.white,
+                              ),
+                            ),
+                          SizedBox(
+                              height: user.displayName != null &&
+                                      user.displayName!.isNotEmpty
+                                  ? 6
+                                  : 0), // Conditional spacing
+                          if (user.email != null)
+                            Text(
+                              user.email!,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white
+                                    .withOpacity(0.9), // Slightly more opaque
+                              ),
+                            ),
+                          SizedBox(height: 10), // Reduced bottom space
+                        ],
                       ),
-                      SizedBox(height: 10), // Reduced bottom space
-                    ],
                     ),
-                  ),
                   ),
                   const PopupMenuDivider(height: 1),
                   PopupMenuItem<String>(
-                  value: 'logout',
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 14.0), // Adjusted padding
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                    Icon(Icons.exit_to_app_rounded, color: Colors.red[600], size: 22), // Slightly adjusted color for consistency
-                    SizedBox(width: 14), // Adjusted spacing
-                    Text(
-                      'Logout',
-                      style: TextStyle(
-                      color: Colors.red[700],
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15,
-                      ),
+                    value: 'logout',
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0, vertical: 14.0), // Adjusted padding
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Icon(Icons.exit_to_app_rounded,
+                            color: Colors.red[600],
+                            size:
+                                22), // Slightly adjusted color for consistency
+                        SizedBox(width: 14), // Adjusted spacing
+                        Text(
+                          'Logout',
+                          style: TextStyle(
+                            color: Colors.red[700],
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ],
                     ),
-                    ],
-                  ),
                   ),
                 ],
-                child: CircleAvatar( // This is the button child in AppBar
-                  backgroundImage: photoURL != null ? NetworkImage(photoURL) : null,
+                child: CircleAvatar(
+                  // This is the button child in AppBar
+                  backgroundImage:
+                      photoURL != null ? NetworkImage(photoURL) : null,
                   backgroundColor: photoURL == null ? Colors.grey[200] : null,
-                  child: photoURL == null ? Icon(Icons.person, color: Colors.indigo[600], size: 20) : null,
+                  child: photoURL == null
+                      ? Icon(Icons.person, color: Colors.indigo[600], size: 20)
+                      : null,
                   radius: 20, // Slightly larger avatar in AppBar
                 ),
               ),
@@ -299,7 +331,8 @@ class _HomeScreenState extends State<HomeScreen> {
           if (userEmail != null) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => ParcelScanning(userEmail: userEmail)),
+              MaterialPageRoute(
+                  builder: (context) => ParcelScanning(userEmail: userEmail)),
             );
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -316,27 +349,34 @@ class _HomeScreenState extends State<HomeScreen> {
               return Transform.scale(
                 scale: scale,
                 child: Container(
-                  margin: EdgeInsets.only(bottom: 16, right: 4), // Added right margin for better placement
+                  margin: EdgeInsets.only(
+                      bottom: 16,
+                      right: 4), // Added right margin for better placement
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16), // Slightly more rounded
-                    gradient: LinearGradient( // Applied gradient
+                    borderRadius:
+                        BorderRadius.circular(16), // Slightly more rounded
+                    gradient: LinearGradient(
+                      // Applied gradient
                       colors: [Colors.indigo.shade500, Colors.indigo.shade700],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.indigo.withOpacity(0.4), // Enhanced shadow
+                        color:
+                            Colors.indigo.withOpacity(0.4), // Enhanced shadow
                         blurRadius: 12,
                         offset: Offset(0, 6),
                       ),
                     ],
                   ),
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12), // Adjusted padding
+                  padding: EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 12), // Adjusted padding
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      AnimatedContainer( // Added animation for icon
+                      AnimatedContainer(
+                        // Added animation for icon
                         duration: Duration(milliseconds: 150),
                         padding: EdgeInsets.all(_isButtonPressed ? 7 : 6),
                         decoration: BoxDecoration(
@@ -345,7 +385,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         child: Icon(
                           Icons.directions_car_filled_outlined, // Changed icon
-                          size: _isButtonPressed ? 22 : 20, // Icon size change on press
+                          size: _isButtonPressed
+                              ? 22
+                              : 20, // Icon size change on press
                           color: Colors.white,
                         ),
                       ),
@@ -407,7 +449,8 @@ class _HomeScreenState extends State<HomeScreen> {
         if (routeSummary != null)
           Card(
             elevation: 4,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
@@ -424,7 +467,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.history, color: Colors.indigo[700], size: 28),
+                        Icon(Icons.history,
+                            color: Colors.indigo[700], size: 28),
                         SizedBox(width: 12),
                         Text(
                           "Previous Route",
@@ -437,9 +481,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       ],
                     ),
                     SizedBox(height: 12),
-                    _buildSummaryRow(Icons.directions_car, "Distance: ${routeSummary!['distance']} km"),
-                    _buildSummaryRow(Icons.timer_outlined, "Time: ${routeSummary!['time']} minutes"),
-                    _buildSummaryRow(Icons.location_on_outlined, "Addresses: ${routeSummary!['totalAddresses']}"),
+                    _buildSummaryRow(Icons.directions_car,
+                        "Distance: ${routeSummary!['distance']} km"),
+                    _buildSummaryRow(Icons.timer_outlined,
+                        "Time: ${routeSummary!['time']} minutes"),
+                    _buildSummaryRow(Icons.location_on_outlined,
+                        "Addresses: ${routeSummary!['totalAddresses']}"),
                   ],
                 ),
               ),
@@ -450,7 +497,8 @@ class _HomeScreenState extends State<HomeScreen> {
         // Total Routes Summary
         Card(
           elevation: 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
@@ -467,7 +515,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.assessment, color: Colors.deepPurple[700], size: 28),
+                      Icon(Icons.assessment,
+                          color: Colors.deepPurple[700], size: 28),
                       SizedBox(width: 12),
                       Text(
                         "Lifetime Summary",
@@ -480,9 +529,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   SizedBox(height: 12),
-                  _buildSummaryRow(Icons.directions_car, "Total Distance: ${allRoutes.fold<double>(0.0, (sum, route) => sum + ((route['distance'] as num?)?.toDouble() ?? 0.0)).toStringAsFixed(1)} km"),
-                  _buildSummaryRow(Icons.timer_outlined, "Total Time: ${allRoutes.fold<int>(0, (sum, route) => sum + ((route['time'] as num?)?.toInt() ?? 0))} minutes"),
-                  _buildSummaryRow(Icons.location_on_outlined, "Total Addresses: ${allRoutes.fold<int>(0, (sum, route) => sum + ((route['totalAddresses'] as num?)?.toInt() ?? 0))}"),
+                  _buildSummaryRow(Icons.directions_car,
+                      "Total Distance: ${allRoutes.fold<double>(0.0, (sum, route) => sum + ((route['distance'] as num?)?.toDouble() ?? 0.0)).toStringAsFixed(1)} km"),
+                  _buildSummaryRow(Icons.timer_outlined,
+                      "Total Time: ${allRoutes.fold<int>(0, (sum, route) => sum + ((route['time'] as num?)?.toInt() ?? 0))} minutes"),
+                  _buildSummaryRow(Icons.location_on_outlined,
+                      "Total Addresses: ${allRoutes.fold<int>(0, (sum, route) => sum + ((route['totalAddresses'] as num?)?.toInt() ?? 0))}"),
                 ],
               ),
             ),
@@ -528,13 +580,16 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               TextButton.icon(
                 icon: Icon(
-                  isAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                  isAscending
+                      ? Icons.arrow_upward_rounded
+                      : Icons.arrow_downward_rounded,
                   color: Colors.indigo,
                   size: 20,
                 ),
                 label: Text(
                   isAscending ? "Oldest First" : "Newest First",
-                  style: TextStyle(color: Colors.indigo, fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                      color: Colors.indigo, fontWeight: FontWeight.w600),
                 ),
                 onPressed: () {
                   setState(() {
@@ -598,7 +653,8 @@ class _HomeScreenState extends State<HomeScreen> {
             return Card(
               elevation: 2,
               margin: EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: ListTile(
                 leading: CircleAvatar(
                   backgroundColor: Colors.indigo[100],
@@ -617,7 +673,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text("Addresses: ${route['totalAddresses']}"),
                   ],
                 ),
-                trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+                trailing: Icon(Icons.arrow_forward_ios,
+                    size: 16, color: Colors.grey[400]),
                 onTap: () {
                   // Optional: Navigate to a detailed view of the route
                 },
@@ -770,7 +827,8 @@ class NewsCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 0,
       child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width - 32),
+        constraints:
+            BoxConstraints(maxWidth: MediaQuery.of(context).size.width - 32),
         child: Container(
           decoration: BoxDecoration(
             color: color ?? Colors.grey[100],
@@ -832,7 +890,8 @@ class NewsCard extends StatelessWidget {
                       onPressed: () {},
                       style: TextButton.styleFrom(
                         minimumSize: Size.zero,
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       ),
                       child: Text(
                         "Read more →",
