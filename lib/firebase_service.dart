@@ -208,10 +208,8 @@ class FirebaseService {
       required int time,
       required int totalAddresses}) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('route_summaries')
-          .doc(userEmail)
-          .set({
+      await FirebaseFirestore.instance.collection('route_summaries').doc().set({
+        'userEmail': userEmail, // ✅ ADD THIS
         'distance': distance,
         'time': time,
         'totalAddresses': totalAddresses,

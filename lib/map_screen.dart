@@ -851,86 +851,182 @@ class _MapScreenState extends State<MapScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        backgroundColor: Colors.white,
-        title: Row(
-          children: [
-            Icon(Icons.location_on_outlined, color: themeBlue, size: 26),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                "Stop ${index + 1} Details",
-                style: TextStyle(
-                  color: themeBlue,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Montserrat',
-                  fontSize: 18,
+      barrierDismissible: true,
+      builder: (context) => Dialog(
+        elevation: 0,
+        insetPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 28),
+        backgroundColor: Colors.transparent,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.blueGrey.withOpacity(0.15),
+                blurRadius: 24,
+                offset: Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Custom header with blue gradient & large location icon
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [themeBlue, Colors.blueAccent.shade400],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    SizedBox(height: 10),
+                    Text(
+                      "Stop ${index + 1} Details",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Montserrat',
+                        fontSize: 21,
+                        color: Colors.white,
+                        letterSpacing: 0.08
+                      ),
+                    )
+                  ],
                 ),
               ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: ListBody(
-            children: <Widget>[
-              Text(
-                "Address:",
-                style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Montserrat',
-                    fontSize: 15,
-                    color: Colors.blueGrey[700]),
+              Padding(
+                padding:
+                  EdgeInsets.symmetric(horizontal: 22, vertical: 22),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Address",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Montserrat',
+                        fontSize: 15.5,
+                        color: themeBlue,
+                        letterSpacing: 0.04,
+                      ),
+                    ),
+                    SizedBox(height: 7),
+                    Card(
+                      color: Colors.blueGrey.shade50,
+                      shadowColor: Colors.blueGrey.shade100,
+                      elevation: 0,
+                      margin: EdgeInsets.all(0),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(11)
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical:12, horizontal: 13),
+                        child: Text(
+                          stopAddress,
+                          style: TextStyle(
+                            fontFamily: 'Montserrat',
+                            fontSize: 15.0,
+                            color: Colors.blueGrey.shade800,
+                          ),
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 17),
+                    Divider(color: Colors.grey.shade300),
+                    SizedBox(height: 5),
+                    Text(
+                      "Coordinates",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Montserrat',
+                        fontSize: 15.5,
+                        color: themeBlue,
+                      ),
+                    ),
+                    SizedBox(height: 7),
+                    Row(
+                      children: [
+                        Chip(
+                          avatar: Icon(Icons.my_location, color: themeBlue, size:18), // Changed icon
+                          backgroundColor: Colors.blue.shade50,
+                          label: Text(
+                            "Lat: ${stopLocation.latitude.toStringAsFixed(6)}",
+                            style: TextStyle(
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.w500,
+                              color: themeBlue,
+                              fontSize: 13.9,
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 6),
+                        Chip(
+                          avatar: Icon(Icons.explore, color: Colors.teal, size:18), // Changed icon
+                          backgroundColor: Colors.teal.shade50,
+                          label: Text(
+                            "Lng: ${stopLocation.longitude.toStringAsFixed(6)}",
+                            style: TextStyle(
+                              fontFamily: 'Montserrat',
+                              fontWeight: FontWeight.w500,
+                              color: Colors.teal,
+                              fontSize: 13.9,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 7),
+                  ],
+                ),
               ),
-              SizedBox(height: 4),
-              Text(
-                stopAddress,
-                style: TextStyle(
-                    fontFamily: 'Montserrat',
-                    fontSize: 14,
-                    color: Colors.blueGrey[600]),
+              Divider(
+                thickness: 1.3,
+                color: Colors.grey.shade100,
+                height: 0,
               ),
-              SizedBox(height: 16),
-              Text(
-                "Coordinates:",
-                style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Montserrat',
-                    fontSize: 15,
-                    color: Colors.blueGrey[700]),
-              ),
-              SizedBox(height: 4),
-              Text(
-                "Latitude: ${stopLocation.latitude.toStringAsFixed(6)}",
-                style: TextStyle(
-                    fontFamily: 'Montserrat',
-                    fontSize: 14,
-                    color: Colors.blueGrey[600]),
-              ),
-              Text(
-                "Longitude: ${stopLocation.longitude.toStringAsFixed(6)}",
-                style: TextStyle(
-                    fontFamily: 'Montserrat',
-                    fontSize: 14,
-                    color: Colors.blueGrey[600]),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical:11, horizontal: 15),
+                child: Center(
+                  child: SizedBox(
+                    height: 42,
+                    width: 115,
+                    child: ElevatedButton.icon(
+                      icon: Icon(Icons.close_rounded, size:20, color: Colors.white),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: themeBlue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(13),
+                        ),
+                        elevation: 2
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      label: Text(
+                        "CLOSE",
+                        style: TextStyle(
+                          fontFamily: 'Montserrat',
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          fontSize: 15,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
         ),
-        actionsPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(
-              foregroundColor: themeBlue,
-              textStyle: TextStyle(
-                  fontFamily: 'Montserrat',
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14),
-            ),
-            child: Text("CLOSE"),
-          ),
-        ],
       ),
     );
   }

@@ -269,6 +269,9 @@ class _ParcelScanningState extends State<ParcelScanning> {
         longitude,
       );
 
+      // Invalidate optimization cache after adding a parcel
+      OptimizedDeliveryScreen.invalidateCache();
+
       await fetchStoredAddresses(); // Refresh UI, which also sets isLoading = false
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -297,7 +300,9 @@ class _ParcelScanningState extends State<ParcelScanning> {
   // ✅ Delete an address
   Future<void> deleteAddress(String documentId) async {
     await firebaseService.deleteParcel(widget.userEmail, documentId);
-    fetchStoredAddresses(); // Refresh UI
+    // Invalidate optimization cache after deleting a parcel
+    OptimizedDeliveryScreen.invalidateCache();
+    await fetchStoredAddresses(); // Refresh UI
   }
 
   // ✅ Edit an address
@@ -643,6 +648,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                         coordinates["latitude"]!,
                                         coordinates["longitude"]!,
                                       );
+                                      // Invalidate optimization cache after editing a parcel
+                                      OptimizedDeliveryScreen.invalidateCache();
                                       await fetchStoredAddresses(); // Refresh list and distances
                                       Navigator.pop(
                                           context); // Dismiss edit dialog
@@ -833,6 +840,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
                             await firebaseService.deleteParcel(
                                 widget.userEmail, id);
                           }
+                          // Invalidate optimization cache after bulk delete
+                          OptimizedDeliveryScreen.invalidateCache();
                           setState(() {
                             selectedItems.clear();
                             selectionMode = false;

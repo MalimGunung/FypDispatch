@@ -119,7 +119,7 @@ class _LoginPageState extends State<LoginPage> {
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
                       child: Image.network(
-                        'https://media-hosting.imagekit.io/c050505ecb994e3f/Smart%20Dispatch.jpg?Expires=1841588353&Key-Pair-Id=K2ZIVPTIP2VGHC&Signature=TVSztEB~TMpc-JqUfoN2o~vFbnKUxPkwdYwuUimopGtGc8mzZ5IdDBTi86fVpglNuyfAFvyWo-B-WKR1~s7UEn0lD~uoJHsgzmHLVjxqL9CxCIDYT5a115Y~z88Oqkgb3eFDRSqt~Y5Tgdx5PWKjo5VlbT0QTeKwYBTUda1FP3ngkDfhrOl0PV~YnrpJgASRruMUFNziZeqT3mr0bc5KtACGH6XACwGfQFDPYlkGhbEbPjtGB5nVB6T~yHZyzH9MDpnh8CqEuhVsZ4eHEGj1iAEd~WbmESq1kxNZX9G6~X7V9kKXaU1m-eNVdp683KsSS1LauWHB4RRtiUmN3RrC8Q__',
+                        'https://i.imghippo.com/files/khhH3534CU.jpg',
                         height: 90, // Adjusted size
                         width: 90,
                         fit: BoxFit.cover,

@@ -8,8 +8,25 @@ import 'dart:convert';
 
 class OptimizedDeliveryScreen extends StatefulWidget {
   final String userEmail;
-  OptimizedDeliveryScreen({Key? key, required this.userEmail})
-      : super(key: key);
+  final bool forceReoptimize;
+
+  OptimizedDeliveryScreen({
+    Key? key,
+    required this.userEmail,
+    this.forceReoptimize = false,
+  }) : super(key: key);
+
+  // Static cache for optimization results
+  static List<Map<String, dynamic>>? _cachedRoute;
+  static List<double?>? _cachedDistances;
+  static double? _cachedTotalDistance;
+  static String? _cachedEstimatedTime;
+  static bool _cacheInvalidated = true;
+
+  // Call this from parcel_scanner.dart after changes
+  static void invalidateCache() {
+    _cacheInvalidated = true;
+  }
 
   @override
   _OptimizedDeliveryScreenState createState() =>
@@ -21,16 +38,43 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
   bool isLoading = true;
   final AStarRouteOptimizer optimizer = AStarRouteOptimizer();
   Position? currentPosition;
-  List<double?> orsDistances = []; // Store ORS distances for each delivery
+  List<double?> orsDistances = [];
   double loadingProgress = 0.0;
   String loadingMessage = "Initializing...";
   double _totalDistanceInKm = 0.0;
   String _estimatedTotalTime = "Calculating...";
+  bool _hasOptimizedOnce = false;
 
   @override
   void initState() {
     super.initState();
-    fetchDeliveryList();
+    // Use cache if available and not invalidated, else optimize
+    if (!OptimizedDeliveryScreen._cacheInvalidated &&
+        OptimizedDeliveryScreen._cachedRoute != null &&
+        OptimizedDeliveryScreen._cachedDistances != null &&
+        OptimizedDeliveryScreen._cachedTotalDistance != null &&
+        OptimizedDeliveryScreen._cachedEstimatedTime != null &&
+        !widget.forceReoptimize) {
+      setState(() {
+        deliveryList = OptimizedDeliveryScreen._cachedRoute!;
+        orsDistances = OptimizedDeliveryScreen._cachedDistances!;
+        _totalDistanceInKm = OptimizedDeliveryScreen._cachedTotalDistance!;
+        _estimatedTotalTime = OptimizedDeliveryScreen._cachedEstimatedTime!;
+        isLoading = false;
+      });
+    } else {
+      fetchDeliveryList();
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant OptimizedDeliveryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If forceReoptimize is true, re-run optimization
+    if (widget.forceReoptimize && !_hasOptimizedOnce) {
+      fetchDeliveryList();
+      _hasOptimizedOnce = true;
+    }
   }
 
   Future<void> fetchDeliveryList() async {
@@ -39,7 +83,7 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
         isLoading = true;
         loadingMessage = "Fetching current location...";
         loadingProgress = 0.1;
-        _totalDistanceInKm = 0.0; // Reset totals
+        _totalDistanceInKm = 0.0;
         _estimatedTotalTime = "Calculating...";
       });
       currentPosition = await Geolocator.getCurrentPosition(
@@ -116,6 +160,13 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
         isLoading = false;
         loadingMessage = "Done!";
       });
+
+      // Cache the result
+      OptimizedDeliveryScreen._cachedRoute = route;
+      OptimizedDeliveryScreen._cachedDistances = distances;
+      OptimizedDeliveryScreen._cachedTotalDistance = calculatedTotalDistance;
+      OptimizedDeliveryScreen._cachedEstimatedTime = estimatedTimeStr;
+      OptimizedDeliveryScreen._cacheInvalidated = false;
     } catch (e) {
       print("❌ Error fetching delivery list: $e");
       setState(() {
@@ -597,16 +648,6 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                                 minHeight: 8, // Make the progress bar thicker
                               ),
                               SizedBox(height: 10),
-                              Text(
-                                "${(loadingProgress * 100).toStringAsFixed(0)}%",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.blueAccent.shade700,
-                                  fontFamily: 'Montserrat',
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SizedBox(height: 20),
                               Text(
                                 // Kept this as a general message
                                 "Optimizing your route, please wait...",
