@@ -46,6 +46,8 @@ class _MapScreenState extends State<MapScreen> {
   String estimatedTime = "Calculating..."; // ✅ Default ETA text
   DateTime startTime = DateTime.now(); // <-- Add this line to define startTime
 
+  double? _orsTotalDistanceKm; // Store ORS total distance for summary
+
   @override
   void initState() {
     super.initState();
@@ -383,9 +385,6 @@ class _MapScreenState extends State<MapScreen> {
 
     currentPosition = position;
 
-    // --- REMOVE ALL ZOOM TO LOCATION LOGIC HERE ---
-    // Do NOT zoom to current or start location here
-
     List<Map<String, dynamic>> optimizedRoute =
         await optimizer.getOptimizedDeliverySequence(widget.userEmail);
 
@@ -439,6 +438,9 @@ class _MapScreenState extends State<MapScreen> {
         }
       });
 
+      // --- Calculate and store total ORS distance for summary ---
+      _orsTotalDistanceKm = await _calculateORSTotalDistance();
+
       drawORSRoute();
     } else {
       setState(() {
@@ -452,26 +454,63 @@ class _MapScreenState extends State<MapScreen> {
     }
   }
 
-  void updateRouteAfterChanges() {
-    setState(() {
-      polylines.clear(); // ✅ Clear old route
-      polylines.add(
-        Polyline(
-          polylineId: PolylineId("updated_route"),
-          points: [
-            LatLng(currentPosition!.latitude, currentPosition!.longitude),
-            ...deliveryPoints
-          ],
-          color: Colors.blue,
-          width: 5,
-        ),
-      );
-    });
-
-    print("✅ Route updated with new stop order!");
+  // --- Add this method ---
+  Future<double?> _calculateORSTotalDistance() async {
+    if (currentPosition == null || deliveryPoints.isEmpty) return null;
+    double total = 0.0;
+    LatLng prev = LatLng(currentPosition!.latitude, currentPosition!.longitude);
+    for (final point in deliveryPoints) {
+      double? dist = await _getORSRoadDistance(
+        prev.latitude, prev.longitude, point.latitude, point.longitude);
+      if (dist != null) total += dist;
+      prev = point;
+    }
+    print("✅ ORS total route distance: $total km");
+    return total;
   }
 
-  void _deleteStop(int index) async {
+  // --- Add this helper ---
+  Future<double?> _getORSRoadDistance(
+      double lat1, double lon1, double lat2, double lon2) async {
+    final url =
+        'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$_orsApiKey&start=$lon1,$lat1&end=$lon2,$lat2';
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final distanceMeters =
+            data['features'][0]['properties']['segments'][0]['distance'];
+        return distanceMeters / 1000.0; // return in KM
+      } else {
+        print("❌ ORS API Error: ${response.body}");
+      }
+    } catch (e) {
+      print("❌ ORS Request Error: $e");
+    }
+    return null;
+  }
+
+  Future<void> recordRouteSummaryToFirebase(
+      double distance, int time, int totalAddresses) async {
+    try {
+      // Use ORS total distance if available, else fallback to calculated distance
+      final double distanceToSave =
+          (_orsTotalDistanceKm != null && _orsTotalDistanceKm! > 0)
+              ? _orsTotalDistanceKm!
+              : distance;
+      await firebaseService.saveRouteSummary(
+        widget.userEmail,
+        distance: distanceToSave,
+        time: time,
+        totalAddresses: totalAddresses,
+      );
+      print("✅ Route summary recorded to Firebase.");
+    } catch (e) {
+      print("❌ Error recording route summary: $e");
+    }
+  }
+
+  Future<void> _deleteStop(int index) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -835,21 +874,6 @@ class _MapScreenState extends State<MapScreen> {
       ),
     );
     return shouldLeave == true;
-  }
-
-  Future<void> recordRouteSummaryToFirebase(
-      double distance, int time, int totalAddresses) async {
-    try {
-      await firebaseService.saveRouteSummary(
-        widget.userEmail,
-        distance: distance,
-        time: time,
-        totalAddresses: totalAddresses,
-      );
-      print("✅ Route summary recorded to Firebase.");
-    } catch (e) {
-      print("❌ Error recording route summary: $e");
-    }
   }
 
   void _showStopDetailsDialog(int index) {

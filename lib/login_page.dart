@@ -120,18 +120,38 @@ class _LoginPageState extends State<LoginPage> {
                       borderRadius: BorderRadius.circular(16),
                       child: Image.network(
                         'https://i.imghippo.com/files/khhH3534CU.jpg',
-                        height: 90, // Adjusted size
+                        height: 90,
                         width: 90,
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                          Icons.image_not_supported,
+                          size: 90,
+                          color: Colors.grey[300],
+                        ),
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return SizedBox(
+                            height: 90,
+                            width: 90,
+                            child: Center(
+                              child: CircularProgressIndicator(
+                                value: loadingProgress.expectedTotalBytes != null
+                                    ? loadingProgress.cumulativeBytesLoaded /
+                                        (loadingProgress.expectedTotalBytes ?? 1)
+                                    : null,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ),
                     SizedBox(height: 20),
                     Text(
                       "Smart Dispatch",
                       style: TextStyle(
-                        fontFamily: 'Inter', // Using a more modern font
+                        fontFamily: 'Inter',
                         fontWeight: FontWeight.bold,
-                        fontSize: 28, // Slightly larger
+                        fontSize: 28,
                         color: themeColor,
                       ),
                     ),

@@ -208,8 +208,11 @@ class FirebaseService {
       required int time,
       required int totalAddresses}) async {
     try {
-      await FirebaseFirestore.instance.collection('route_summaries').doc().set({
-        'userEmail': userEmail, // ✅ ADD THIS
+      await firestore
+          .collection("dispatcher")
+          .doc(userEmail)
+          .collection("route_summaries")
+          .add({
         'distance': distance,
         'time': time,
         'totalAddresses': totalAddresses,
@@ -220,14 +223,27 @@ class FirebaseService {
     }
   }
 
+  // Fetch the latest route summary for the user
   Future<Map<String, dynamic>?> getRouteSummary(String? userEmail) async {
     if (userEmail == null) return null;
     try {
-      final doc = await FirebaseFirestore.instance
-          .collection('route_summaries')
+      final query = await firestore
+          .collection("dispatcher")
           .doc(userEmail)
+          .collection("route_summaries")
+          .orderBy('timestamp', descending: true)
+          .limit(1)
           .get();
-      return doc.exists ? doc.data() : null;
+      if (query.docs.isNotEmpty) {
+        final data = query.docs.first.data();
+        return {
+          'distance': data['distance'],
+          'time': data['time'],
+          'totalAddresses': data['totalAddresses'],
+          'timestamp': data['timestamp'].toDate().toIso8601String(),
+        };
+      }
+      return null;
     } catch (e) {
       print("❌ Error fetching route summary: $e");
       return null;
@@ -237,9 +253,10 @@ class FirebaseService {
   Future<List<Map<String, dynamic>>> getAllRoutes(String? userEmail) async {
     if (userEmail == null) return [];
     try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('route_summaries')
-          .where('userEmail', isEqualTo: userEmail)
+      final querySnapshot = await firestore
+          .collection("dispatcher")
+          .doc(userEmail)
+          .collection("route_summaries")
           .orderBy('timestamp', descending: true)
           .get();
 

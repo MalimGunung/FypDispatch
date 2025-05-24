@@ -65,21 +65,34 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final FirebaseService firebaseService = FirebaseService();
   Map<String, dynamic>? routeSummary;
-  List<Map<String, dynamic>> allRoutes = []; // Store all delivery summaries
-  String selectedFilter = "All"; // Default filter
-  bool isAscending = true; // Sorting order
+  List<Map<String, dynamic>> allRoutes = [];
+  String selectedFilter = "All";
+  bool isAscending = true;
 
   @override
   void initState() {
     super.initState();
-    fetchRouteSummary();
     fetchAllRoutes();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    fetchAllRoutes();
+  }
+
+  // Call this after returning from any delivery/dispatch screen to refresh summary
+  Future<void> refreshAfterDispatch() async {
+    await fetchAllRoutes();
+    setState(() {}); // Force rebuild to update UI
+  }
+
+  // Fetch the latest route summary for the current user (most recent)
   Future<void> fetchRouteSummary() async {
     try {
-      final summary = await firebaseService
-          .getRouteSummary(FirebaseAuth.instance.currentUser?.email);
+      final userEmail = FirebaseAuth.instance.currentUser?.email;
+      if (userEmail == null) return;
+      final summary = await firebaseService.getRouteSummary(userEmail);
       setState(() {
         routeSummary = summary;
       });
@@ -88,12 +101,15 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  // Fetch all route summaries for the current user
   Future<void> fetchAllRoutes() async {
     try {
-      final routes = await firebaseService
-          .getAllRoutes(FirebaseAuth.instance.currentUser?.email);
+      final userEmail = FirebaseAuth.instance.currentUser?.email;
+      if (userEmail == null) return;
+      final routes = await firebaseService.getAllRoutes(userEmail);
       setState(() {
         allRoutes = routes;
+        routeSummary = routes.isNotEmpty ? routes.first : null;
       });
     } catch (e) {
       print("❌ Error fetching all routes: $e");
@@ -326,14 +342,16 @@ class _HomeScreenState extends State<HomeScreen> {
         onTapDown: (_) => setState(() => _isButtonPressed = true),
         onTapUp: (_) => setState(() => _isButtonPressed = false),
         onTapCancel: () => setState(() => _isButtonPressed = false),
-        onTap: () {
+        onTap: () async {
           final userEmail = FirebaseAuth.instance.currentUser?.email;
           if (userEmail != null) {
-            Navigator.push(
+            await Navigator.push(
               context,
               MaterialPageRoute(
                   builder: (context) => ParcelScanning(userEmail: userEmail)),
             );
+            // Ensure summary is refreshed after returning from dispatch
+            await refreshAfterDispatch();
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text("User email not found. Please re-login.")),
@@ -441,6 +459,16 @@ class _HomeScreenState extends State<HomeScreen> {
       return isAscending ? dateA.compareTo(dateB) : dateB.compareTo(dateA);
     });
 
+    // Calculate total summary for all routes
+    double totalDistance = 0.0;
+    int totalTime = 0;
+    int totalAddresses = 0;
+    for (final route in allRoutes) {
+      totalDistance += (route['distance'] as num?)?.toDouble() ?? 0.0;
+      totalTime += (route['time'] as num?)?.toInt() ?? 0;
+      totalAddresses += (route['totalAddresses'] as num?)?.toInt() ?? 0;
+    }
+
     return ListView(
       physics: BouncingScrollPhysics(),
       padding: EdgeInsets.all(16),
@@ -530,11 +558,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   SizedBox(height: 12),
                   _buildSummaryRow(Icons.directions_car,
-                      "Total Distance: ${allRoutes.fold<double>(0.0, (sum, route) => sum + ((route['distance'] as num?)?.toDouble() ?? 0.0)).toStringAsFixed(1)} km"),
+                      "Total Distance: ${totalDistance.toStringAsFixed(1)} km"),
                   _buildSummaryRow(Icons.timer_outlined,
-                      "Total Time: ${allRoutes.fold<int>(0, (sum, route) => sum + ((route['time'] as num?)?.toInt() ?? 0))} minutes"),
+                      "Total Time: $totalTime minutes"),
                   _buildSummaryRow(Icons.location_on_outlined,
-                      "Total Addresses: ${allRoutes.fold<int>(0, (sum, route) => sum + ((route['totalAddresses'] as num?)?.toInt() ?? 0))}"),
+                      "Total Addresses: $totalAddresses"),
                 ],
               ),
             ),
