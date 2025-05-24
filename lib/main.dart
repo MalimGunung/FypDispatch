@@ -4,6 +4,7 @@ import 'parcel_scanner.dart';
 import 'login_page.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // <-- Add this import
 import 'firebase_service.dart'; // <-- Add this import
+import 'dart:ui'; // <-- Add this import for ImageFilter
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -126,217 +127,333 @@ class _HomeScreenState extends State<HomeScreen> {
     final photoURL = user?.photoURL;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          "Smart Dispatch",
-          style: TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w800,
-            color: Color(0xFF2C3E50), // Dark blue-grey color
+      // Add a gradient background
+      body: Stack(
+        children: [
+          // Background gradient
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFe0e7ff), Color(0xFFf8fafc)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
           ),
-        ),
-        actions: [
-          if (user !=
-              null) // Ensure user is not null before showing PopupMenuButton
-            Padding(
-              padding: const EdgeInsets.only(
-                  right: 16.0,
-                  top: 6.0,
-                  bottom: 6.0), // Increased right padding
-              child: PopupMenuButton<String>(
-                offset: const Offset(0, 50), // Slightly increased offset
-                elevation: 3.0, // Add a subtle shadow
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15.0), // Softer corners
+          // Decorative wave header
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ClipPath(
+              clipper: _WaveClipper(),
+              child: Container(
+                height: 180,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.indigo.shade400, Colors.indigo.shade700],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
                 ),
-                tooltip: "Account options",
-                onSelected: (value) async {
-                  if (value == 'logout') {
-                    await FirebaseAuth.instance.signOut();
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (context) => LoginPage()),
-                      (route) => false,
-                    );
-                  }
-                },
-                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                  PopupMenuItem<String>(
-                    enabled: false,
-                    padding: EdgeInsets.zero,
-                    child: Container(
-                      // width: 250, // Removed to allow gradient to fill item width
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16.0, vertical: 16.0),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            Colors.indigo.shade400,
-                            Colors.blue.shade300
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.center,
+              ),
+            ),
+          ),
+          // Main content
+          SafeArea(
+            child: Column(
+              children: [
+                // Custom AppBar
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20.0, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
                         children: [
-                          SizedBox(height: 4), // Reduced top space
-                          CircleAvatar(
-                            radius:
-                                34, // Slightly increased radius for prominence
+                          // Icon(Icons.local_shipping_rounded, color: Colors.white, size: 32), // Removed lorry logo
+                          SizedBox(width: 0), // Remove spacing after icon
+                          Text(
+                            "Smart Dispatch",
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                              fontFamily: 'Inter',
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black26,
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (user != null)
+                        PopupMenuButton<String>(
+                          offset: const Offset(0, 50),
+                          elevation: 3.0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15.0),
+                          ),
+                          tooltip: "Account options",
+                          onSelected: (value) async {
+                            if (value == 'logout') {
+                              await FirebaseAuth.instance.signOut();
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => LoginPage()),
+                                (route) => false,
+                              );
+                            }
+                          },
+                          itemBuilder: (BuildContext context) =>
+                              <PopupMenuEntry<String>>[
+                            PopupMenuItem<String>(
+                              enabled: false,
+                              padding: EdgeInsets.zero,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 16.0, vertical: 16.0),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.indigo.shade400,
+                                      Colors.blue.shade300
+                                    ],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    SizedBox(height: 4),
+                                    CircleAvatar(
+                                      radius: 34,
+                                      backgroundImage: photoURL != null
+                                          ? NetworkImage(photoURL)
+                                          : null,
+                                      backgroundColor: photoURL == null
+                                          ? Colors.white.withOpacity(0.25)
+                                          : Colors.transparent,
+                                      child: photoURL == null
+                                          ? Icon(Icons.person_outline,
+                                              size: 34, color: Colors.white)
+                                          : null,
+                                    ),
+                                    SizedBox(height: 14),
+                                    if (user.displayName != null &&
+                                        user.displayName!.isNotEmpty)
+                                      Text(
+                                        user.displayName!,
+                                        textAlign: TextAlign.center,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 18,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    SizedBox(
+                                        height: user.displayName != null &&
+                                                user.displayName!.isNotEmpty
+                                            ? 6
+                                            : 0),
+                                    if (user.email != null)
+                                      Text(
+                                        user.email!,
+                                        textAlign: TextAlign.center,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.white.withOpacity(0.9),
+                                        ),
+                                      ),
+                                    SizedBox(height: 10),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const PopupMenuDivider(height: 1),
+                            PopupMenuItem<String>(
+                              value: 'logout',
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 20.0, vertical: 14.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.exit_to_app_rounded,
+                                      color: Colors.red[600], size: 22),
+                                  SizedBox(width: 14),
+                                  Text(
+                                    'Logout',
+                                    style: TextStyle(
+                                      color: Colors.red[700],
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          child: CircleAvatar(
                             backgroundImage: photoURL != null
                                 ? NetworkImage(photoURL)
                                 : null,
-                            backgroundColor: photoURL == null
-                                ? Colors.white.withOpacity(0.25)
-                                : Colors.transparent,
+                            backgroundColor:
+                                photoURL == null ? Colors.indigo[100] : null,
                             child: photoURL == null
-                                ? Icon(Icons.person_outline,
-                                    size: 34, color: Colors.white)
+                                ? Icon(Icons.person,
+                                    color: Colors.indigo[600], size: 20)
                                 : null,
+                            radius: 22,
                           ),
-                          SizedBox(height: 14), // Adjusted spacing
-                          if (user.displayName != null &&
-                              user.displayName!.isNotEmpty)
-                            Text(
-                              user.displayName!,
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18, // Slightly increased font size
-                                color: Colors.white,
-                              ),
-                            ),
-                          SizedBox(
-                              height: user.displayName != null &&
-                                      user.displayName!.isNotEmpty
-                                  ? 6
-                                  : 0), // Conditional spacing
-                          if (user.email != null)
-                            Text(
-                              user.email!,
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white
-                                    .withOpacity(0.9), // Slightly more opaque
-                              ),
-                            ),
-                          SizedBox(height: 10), // Reduced bottom space
-                        ],
-                      ),
-                    ),
-                  ),
-                  const PopupMenuDivider(height: 1),
-                  PopupMenuItem<String>(
-                    value: 'logout',
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 20.0, vertical: 14.0), // Adjusted padding
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        Icon(Icons.exit_to_app_rounded,
-                            color: Colors.red[600],
-                            size:
-                                22), // Slightly adjusted color for consistency
-                        SizedBox(width: 14), // Adjusted spacing
-                        Text(
-                          'Logout',
-                          style: TextStyle(
-                            color: Colors.red[700],
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
+                        )
+                      else
+                        IconButton(
+                          icon: Icon(Icons.login, color: Colors.white),
+                          onPressed: () {
+                            Navigator.pushAndRemoveUntil(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => LoginPage()),
+                              (route) => false,
+                            );
+                          },
+                          tooltip: 'Login',
                         ),
-                      ],
-                    ),
+                    ],
                   ),
-                ],
-                child: CircleAvatar(
-                  // This is the button child in AppBar
-                  backgroundImage:
-                      photoURL != null ? NetworkImage(photoURL) : null,
-                  backgroundColor: photoURL == null ? Colors.grey[200] : null,
-                  child: photoURL == null
-                      ? Icon(Icons.person, color: Colors.indigo[600], size: 20)
-                      : null,
-                  radius: 20, // Slightly larger avatar in AppBar
                 ),
-              ),
-            )
-          else // Fallback if user is somehow null, though AuthGate should prevent this
-            IconButton(
-              icon: Icon(Icons.login, color: Colors.indigo[700]),
-              onPressed: () {
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  MaterialPageRoute(builder: (context) => LoginPage()),
-                  (route) => false,
-                );
-              },
-              tooltip: 'Login',
-            ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Toggle Tabs
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12),
-            child: Row(
-              children: [
-                for (int i = 0; i < tabs.length; i++)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 12.0),
-                    child: ChoiceChip(
-                      label: Text(
-                        tabs[i],
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontWeight: FontWeight.w600,
+                // Toggle Tabs
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20.0, vertical: 12),
+                  child: Row(
+                    children: [
+                      for (int i = 0; i < tabs.length; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12.0),
+                          child: AnimatedScale(
+                            scale: selectedTabIndex == i
+                                ? 1.05
+                                : 0.97, // Slightly smaller
+                            duration: Duration(milliseconds: 200),
+                            curve: Curves.easeInOut,
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(
+                                    16), // Slightly less rounded
+                                gradient: selectedTabIndex == i
+                                    ? LinearGradient(
+                                        colors: [
+                                          Colors.indigo.withOpacity(0.18),
+                                          Colors.blue.withOpacity(0.10)
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      )
+                                    : null,
+                                border: Border.all(
+                                  color: selectedTabIndex == i
+                                      ? Colors.indigo.withOpacity(0.35)
+                                      : Colors.transparent,
+                                  width: 2,
+                                ),
+                                boxShadow: selectedTabIndex == i
+                                    ? [
+                                        BoxShadow(
+                                          color:
+                                              Colors.indigo.withOpacity(0.10),
+                                          blurRadius: 12,
+                                          offset: Offset(0, 4),
+                                        ),
+                                      ]
+                                    : [],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: BackdropFilter(
+                                  filter: selectedTabIndex == i
+                                      ? ImageFilter.blur(sigmaX: 8, sigmaY: 8)
+                                      : ImageFilter.blur(sigmaX: 0, sigmaY: 0),
+                                  child: ChoiceChip(
+                                    label: Row(
+                                      children: [
+                                        Icon(
+                                          i == 0
+                                              ? Icons
+                                                  .dashboard_customize_rounded
+                                              : Icons.newspaper_rounded,
+                                          color: selectedTabIndex == i
+                                              ? Colors.indigo[700]
+                                              : Colors.indigo[300],
+                                          size: 17, // Smaller icon
+                                        ),
+                                        SizedBox(width: 5), // Less spacing
+                                        Text(
+                                          tabs[i],
+                                          style: TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 14, // Smaller font
+                                            color: selectedTabIndex == i
+                                                ? Colors.indigo[700]
+                                                : Colors.indigo[300],
+                                            letterSpacing: 0.2,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    selected: selectedTabIndex == i,
+                                    onSelected: (_) =>
+                                        setState(() => selectedTabIndex = i),
+                                    selectedColor: Colors.transparent,
+                                    backgroundColor: Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8), // Smaller padding
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                      ),
-                      selected: selectedTabIndex == i,
-                      onSelected: (_) => setState(() => selectedTabIndex = i),
-                      selectedColor: Colors.indigo[600],
-                      backgroundColor: Colors.grey[100],
-                      labelStyle: TextStyle(
-                        color: selectedTabIndex == i
-                            ? Colors.white
-                            : Colors.grey[800],
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    ],
+                  ),
+                ),
+
+                // Content
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: AnimatedSwitcher(
+                      duration: Duration(milliseconds: 350),
+                      switchInCurve: Curves.easeIn,
+                      switchOutCurve: Curves.easeOut,
+                      child: selectedTabIndex == 0
+                          ? buildDispatchList()
+                          : buildNewsList(),
                     ),
                   ),
+                ),
               ],
             ),
           ),
-
-          // Content
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: AnimatedSwitcher(
-                duration: Duration(milliseconds: 300),
-                child: selectedTabIndex == 0
-                    ? buildDispatchList()
-                    : buildNewsList(),
-              ),
-            ),
-          ),
         ],
       ),
-
       // Floating Action Button
       floatingActionButton: GestureDetector(
         onTapDown: (_) => setState(() => _isButtonPressed = true),
@@ -367,34 +484,27 @@ class _HomeScreenState extends State<HomeScreen> {
               return Transform.scale(
                 scale: scale,
                 child: Container(
-                  margin: EdgeInsets.only(
-                      bottom: 16,
-                      right: 4), // Added right margin for better placement
+                  margin: EdgeInsets.only(bottom: 16, right: 4),
                   decoration: BoxDecoration(
-                    borderRadius:
-                        BorderRadius.circular(16), // Slightly more rounded
+                    borderRadius: BorderRadius.circular(18),
                     gradient: LinearGradient(
-                      // Applied gradient
                       colors: [Colors.indigo.shade500, Colors.indigo.shade700],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color:
-                            Colors.indigo.withOpacity(0.4), // Enhanced shadow
-                        blurRadius: 12,
-                        offset: Offset(0, 6),
+                        color: Colors.indigo.withOpacity(0.25),
+                        blurRadius: 16,
+                        offset: Offset(0, 8),
                       ),
                     ],
                   ),
-                  padding: EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 12), // Adjusted padding
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       AnimatedContainer(
-                        // Added animation for icon
                         duration: Duration(milliseconds: 150),
                         padding: EdgeInsets.all(_isButtonPressed ? 7 : 6),
                         decoration: BoxDecoration(
@@ -402,21 +512,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          Icons.directions_car_filled_outlined, // Changed icon
-                          size: _isButtonPressed
-                              ? 22
-                              : 20, // Icon size change on press
+                          Icons.directions_car_filled_outlined,
+                          size: _isButtonPressed ? 22 : 20,
                           color: Colors.white,
                         ),
                       ),
-                      SizedBox(width: 10), // Adjusted spacing
+                      SizedBox(width: 12),
                       Text(
                         "DISPATCH",
                         style: TextStyle(
                           color: Colors.white,
-                          fontWeight: FontWeight.bold, // Bolder text
-                          fontSize: 13, // Slightly larger font
-                          letterSpacing: 1.0, // Increased letter spacing
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          letterSpacing: 1.2,
                         ),
                       ),
                     ],
@@ -471,46 +579,64 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return ListView(
       physics: BouncingScrollPhysics(),
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.only(top: 8, left: 8, right: 8, bottom: 24),
       children: [
+        // Section divider
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Divider(
+            thickness: 2,
+            color: Colors.indigo[100],
+            endIndent: 80,
+            indent: 8,
+          ),
+        ),
         // Previous Route Summary
         if (routeSummary != null)
           Card(
-            elevation: 4,
+            elevation: 6,
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            margin: EdgeInsets.only(bottom: 18),
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 gradient: LinearGradient(
                   colors: [Colors.indigo.shade50, Colors.indigo.shade100],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.indigo.withOpacity(0.07),
+                    blurRadius: 12,
+                    offset: Offset(0, 4),
+                  ),
+                ],
               ),
               child: Padding(
-                padding: EdgeInsets.all(20),
+                padding: EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
                         Icon(Icons.history,
-                            color: Colors.indigo[700], size: 28),
-                        SizedBox(width: 12),
+                            color: Colors.indigo[700], size: 30),
+                        SizedBox(width: 14),
                         Text(
                           "Previous Route",
                           style: TextStyle(
-                            fontSize: 20,
+                            fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: Colors.indigo[800],
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 12),
+                    SizedBox(height: 14),
                     _buildSummaryRow(Icons.directions_car,
-                        "Distance: ${routeSummary!['distance']} km"),
+                        "Distance: ${(routeSummary!['distance'] as num).toStringAsFixed(1)} km"),
                     _buildSummaryRow(Icons.timer_outlined,
                         "Time: ${routeSummary!['time']} minutes"),
                     _buildSummaryRow(Icons.location_on_outlined,
@@ -520,47 +646,53 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           ),
-        SizedBox(height: 16),
-
         // Total Routes Summary
         Card(
-          elevation: 4,
+          elevation: 6,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          margin: EdgeInsets.only(bottom: 18),
           child: Container(
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
               gradient: LinearGradient(
                 colors: [Colors.deepPurple.shade50, Colors.deepPurple.shade100],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.deepPurple.withOpacity(0.07),
+                  blurRadius: 12,
+                  offset: Offset(0, 4),
+                ),
+              ],
             ),
             child: Padding(
-              padding: EdgeInsets.all(20),
+              padding: EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       Icon(Icons.assessment,
-                          color: Colors.deepPurple[700], size: 28),
-                      SizedBox(width: 12),
+                          color: Colors.deepPurple[700], size: 30),
+                      SizedBox(width: 14),
                       Text(
                         "Lifetime Summary",
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: Colors.deepPurple[800],
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 12),
+                  SizedBox(height: 14),
                   _buildSummaryRow(Icons.directions_car,
                       "Total Distance: ${totalDistance.toStringAsFixed(1)} km"),
-                  _buildSummaryRow(Icons.timer_outlined,
-                      "Total Time: $totalTime minutes"),
+                  _buildSummaryRow(
+                      Icons.timer_outlined, "Total Time: $totalTime minutes"),
                   _buildSummaryRow(Icons.location_on_outlined,
                       "Total Addresses: $totalAddresses"),
                 ],
@@ -574,61 +706,112 @@ class _HomeScreenState extends State<HomeScreen> {
 
         // Filter and Sort Options
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: selectedFilter,
-                    icon: Icon(Icons.filter_list, color: Colors.indigo),
-                    items: ["All", "Today", "This Week"]
-                        .map((filter) => DropdownMenuItem(
-                              value: filter,
-                              child: Text(
-                                filter,
-                                style: TextStyle(
-                                    fontSize: 14, fontWeight: FontWeight.w500),
-                              ),
-                            ))
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedFilter = value!;
-                      });
-                    },
+              // Improved filter dropdown with card effect
+              Card(
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                margin: EdgeInsets.zero,
+                color: Colors.white,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: selectedFilter,
+                      icon: Icon(Icons.filter_alt_rounded,
+                          color: Colors.indigo[400], size: 22),
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.indigo[700],
+                        fontFamily: 'Inter',
+                      ),
+                      dropdownColor: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      items: ["All", "Today", "This Week"]
+                          .map((filter) => DropdownMenuItem(
+                                value: filter,
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      filter == "All"
+                                          ? Icons.all_inclusive
+                                          : filter == "Today"
+                                              ? Icons.today_rounded
+                                              : Icons
+                                                  .calendar_view_week_rounded,
+                                      color: Colors.indigo[300],
+                                      size: 18,
+                                    ),
+                                    SizedBox(width: 7),
+                                    Text(filter),
+                                  ],
+                                ),
+                              ))
+                          .toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedFilter = value!;
+                        });
+                      },
+                    ),
                   ),
                 ),
               ),
-              TextButton.icon(
-                icon: Icon(
-                  isAscending
-                      ? Icons.arrow_upward_rounded
-                      : Icons.arrow_downward_rounded,
-                  color: Colors.indigo,
-                  size: 20,
-                ),
-                label: Text(
-                  isAscending ? "Oldest First" : "Newest First",
-                  style: TextStyle(
-                      color: Colors.indigo, fontWeight: FontWeight.w600),
-                ),
-                onPressed: () {
-                  setState(() {
-                    isAscending = !isAscending;
-                  });
-                },
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  backgroundColor: Colors.indigo.withOpacity(0.1),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              // Improved sort button with card effect and subtle gradient
+              Card(
+                elevation: 3,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                margin: EdgeInsets.zero,
+                child: Ink(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.indigo.withOpacity(0.09),
+                        Colors.indigo.withOpacity(0.03)
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                  ),
+                  child: TextButton.icon(
+                    icon: Icon(
+                      isAscending
+                          ? Icons.arrow_upward_rounded
+                          : Icons.arrow_downward_rounded,
+                      color: Colors.indigo[600],
+                      size: 20,
+                    ),
+                    label: Text(
+                      isAscending ? "Oldest First" : "Newest First",
+                      style: TextStyle(
+                        color: Colors.indigo[700],
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        fontFamily: 'Inter',
+                      ),
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        isAscending = !isAscending;
+                      });
+                    },
+                    style: TextButton.styleFrom(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      backgroundColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 0,
+                      shadowColor: Colors.transparent,
+                    ),
                   ),
                 ),
               ),
@@ -644,11 +827,11 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Center(
               child: Column(
                 children: [
-                  Icon(Icons.search_off, size: 48, color: Colors.grey[400]),
-                  SizedBox(height: 8),
+                  Icon(Icons.search_off, size: 54, color: Colors.indigo[100]),
+                  SizedBox(height: 10),
                   Text(
                     "No routes found for '$selectedFilter'.",
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 17, color: Colors.indigo[300]),
                   ),
                 ],
               ),
@@ -660,16 +843,16 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Center(
               child: Column(
                 children: [
-                  Icon(Icons.map_outlined, size: 48, color: Colors.grey[400]),
-                  SizedBox(height: 8),
+                  Icon(Icons.map_outlined, size: 54, color: Colors.indigo[100]),
+                  SizedBox(height: 10),
                   Text(
                     "No dispatch history yet.",
-                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                    style: TextStyle(fontSize: 17, color: Colors.indigo[300]),
                   ),
                   SizedBox(height: 4),
                   Text(
                     "Start a dispatch to see your routes here.",
-                    style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+                    style: TextStyle(fontSize: 15, color: Colors.indigo[200]),
                   ),
                 ],
               ),
@@ -678,36 +861,118 @@ class _HomeScreenState extends State<HomeScreen> {
         else
           ...filteredRoutes.map((route) {
             final routeDate = DateTime.parse(route['timestamp']);
-            return Card(
-              elevation: 2,
-              margin: EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: Colors.indigo[100],
-                  child: Icon(Icons.route_outlined, color: Colors.indigo[700]),
-                ),
-                title: Text(
-                  "Route on ${routeDate.toLocal().toString().split(' ')[0]}",
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SizedBox(height: 4),
-                    Text("Distance: ${route['distance']} km"),
-                    Text("Time: ${route['time']} minutes"),
-                    Text("Addresses: ${route['totalAddresses']}"),
-                  ],
-                ),
-                trailing: Icon(Icons.arrow_forward_ios,
-                    size: 16, color: Colors.grey[400]),
-                onTap: () {
-                  // Optional: Navigate to a detailed view of the route
-                },
-              ),
-            );
+            return AnimatedContainer(
+                duration: Duration(milliseconds: 250),
+                curve: Curves.easeIn,
+                child: Card(
+                  elevation: 6,
+                  margin: EdgeInsets.only(bottom: 16, left: 2, right: 2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(22),
+                    side: BorderSide(
+                        color: Colors.indigo.withOpacity(0.08), width: 1.2),
+                  ),
+                  shadowColor: Colors.indigo.withOpacity(0.10),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(22),
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.indigo.withOpacity(0.04),
+                          Colors.blue.withOpacity(0.03),
+                          Colors.white.withOpacity(0.97),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: ListTile(
+                      contentPadding:
+                          EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      leading: Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.indigo.shade100,
+                              Colors.indigo.shade200
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.indigo.withOpacity(0.10),
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: CircleAvatar(
+                          backgroundColor: Colors.transparent,
+                          radius: 22, // smaller avatar
+                          child: Icon(Icons.route_outlined,
+                              color: Colors.indigo[700],
+                              size: 22), // smaller icon
+                        ),
+                      ),
+                      title: Padding(
+                        padding: const EdgeInsets.only(bottom: 2.0),
+                        child: Text(
+                          "Route on ${routeDate.toLocal().toString().split(' ')[0]}",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15, // smaller font
+                            color: Colors.indigo[800],
+                            letterSpacing: 0.1,
+                          ),
+                        ),
+                      ),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Row(
+                          children: [
+                            Icon(Icons.directions_car,
+                                size: 13, color: Colors.indigo[300]),
+                            SizedBox(width: 3),
+                            Text(
+                              "${(route['distance'] as num).toStringAsFixed(1)} km",
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 13),
+                            ),
+                            SizedBox(width: 10),
+                            Icon(Icons.timer_outlined,
+                                size: 13, color: Colors.indigo[300]),
+                            SizedBox(width: 3),
+                            Text("${route['time']} min",
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600, fontSize: 13)),
+                            SizedBox(width: 10),
+                            Icon(Icons.location_on_outlined,
+                                size: 13, color: Colors.indigo[300]),
+                            SizedBox(width: 3),
+                            Text("${route['totalAddresses']}",
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w600, fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                      trailing: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.indigo.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        padding:
+                            EdgeInsets.symmetric(horizontal: 7, vertical: 6),
+                        child: Icon(Icons.arrow_forward_ios,
+                            size: 13, color: Colors.indigo[400]),
+                      ),
+                      onTap: () {
+                        // Optional: Navigate to a detailed view of the route
+                      },
+                    ),
+                  ),
+                ));
           }).toList(),
       ],
     );
@@ -938,4 +1203,21 @@ class NewsCard extends StatelessWidget {
       ),
     );
   }
+}
+
+// Decorative wave clipper for header
+class _WaveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.lineTo(0, size.height - 40);
+    path.quadraticBezierTo(
+        size.width / 2, size.height, size.width, size.height - 40);
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
