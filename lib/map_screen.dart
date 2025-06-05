@@ -493,7 +493,11 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> recordRouteSummaryToFirebase(
       double distance, int time, int totalAddresses) async {
     try {
-      // Use ORS total distance if available, else fallback to calculated distance
+      // Calculate the correct total addresses delivered for the summary.
+      // deliveryStatus contains only remaining (not completed) stops.
+      // To get the total delivered, use the original number of stops.
+      int deliveredCount = deliveryAddresses.length + totalAddresses;
+
       final double distanceToSave =
           (_orsTotalDistanceKm != null && _orsTotalDistanceKm! > 0)
               ? _orsTotalDistanceKm!
@@ -502,7 +506,7 @@ class _MapScreenState extends State<MapScreen> {
         widget.userEmail,
         distance: distanceToSave,
         time: time,
-        totalAddresses: totalAddresses,
+        totalAddresses: deliveredCount,
       );
       print("✅ Route summary recorded to Firebase.");
     } catch (e) {

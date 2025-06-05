@@ -99,7 +99,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
     List<Map<String, dynamic>> storedAddresses =
         await firebaseService.getStoredAddresses(widget.userEmail);
     setState(() {
-      addressList = storedAddresses;
+      addressList = List.from(storedAddresses.reversed); // Latest at top
       isLoading = false;
     });
     // After fetching addresses, update ORS distances if location is available
@@ -128,11 +128,11 @@ class _ParcelScanningState extends State<ParcelScanning> {
         return;
       }
 
-      // Check for duplicate address
-      final trimmedNewAddress = address.trim().toLowerCase();
+      // Improved duplicate address check
+      final normalizedNewAddress = _normalizeAddress(address);
       bool isDuplicate = addressList.any((existingAddress) =>
-          existingAddress["address"].toString().trim().toLowerCase() ==
-          trimmedNewAddress);
+          _normalizeAddress(existingAddress["address"].toString()) ==
+          normalizedNewAddress);
 
       if (isDuplicate) {
         setState(() => isLoading = false); // Hide loader before showing dialog
@@ -273,6 +273,11 @@ class _ParcelScanningState extends State<ParcelScanning> {
       OptimizedDeliveryScreen.invalidateCache();
 
       await fetchStoredAddresses(); // Refresh UI, which also sets isLoading = false
+
+      // Ensure latest address is at the top after adding
+      setState(() {
+        addressList = List.from(addressList); // Defensive, in case fetch doesn't reverse
+      });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("✅ Parcel Added Successfully!")),
@@ -693,6 +698,15 @@ class _ParcelScanningState extends State<ParcelScanning> {
         );
       },
     );
+  }
+
+  // Utility to normalize address for duplicate checking
+  String _normalizeAddress(String address) {
+    return address
+        .replaceAll(RegExp(r'[^\w\s]'), '') // Remove punctuation
+        .replaceAll(RegExp(r'\s+'), ' ')    // Collapse whitespace
+        .trim()
+        .toLowerCase();
   }
 
   Future<void> markDeliveriesComplete() async {
