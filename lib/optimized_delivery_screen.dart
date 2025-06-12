@@ -179,7 +179,7 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
   Future<double?> _getORSRoadDistance(
       double lat1, double lon1, double lat2, double lon2) async {
     const String _orsApiKey =
-        '5b3ce3597851110001cf6248ceb07a6af45d4cc8a31c03c5fb47c452';
+        '5b3ce3597851110001cf6248014503d6bb042740758494cf91a36816644b5aba3fbc5e56ca3d9bfb';
     final url =
         'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$_orsApiKey&start=$lon1,$lat1&end=$lon2,$lat2';
     try {

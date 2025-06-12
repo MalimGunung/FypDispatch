@@ -10,7 +10,7 @@ class AStarRouteOptimizer {
 
   // ✅ Replace with your ORS API key
   static const String _orsApiKey =
-      '5b3ce3597851110001cf6248ceb07a6af45d4cc8a31c03c5fb47c452';
+      '5b3ce3597851110001cf6248014503d6bb042740758494cf91a36816644b5aba3fbc5e56ca3d9bfb';
 
   // ✅ Get real road distance using ORS
   Future<double> _getORSRoadDistance(

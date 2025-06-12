@@ -40,7 +40,7 @@ class _MapScreenState extends State<MapScreen> {
 
   // ORS API Key and Average Speed
   static const String _orsApiKey =
-      '5b3ce3597851110001cf6248ceb07a6af45d4cc8a31c03c5fb47c452'; // Your ORS API Key
+      '5b3ce3597851110001cf6248014503d6bb042740758494cf91a36816644b5aba3fbc5e56ca3d9bfb'; // Your ORS API Key
   static const double _averageSpeedKmH = 40.0; // Average speed in km/h
 
   String estimatedTime = "Calculating..."; // ✅ Default ETA text
