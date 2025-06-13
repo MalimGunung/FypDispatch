@@ -8,31 +8,44 @@ import 'location_service.dart';
 class AStarRouteOptimizer {
   final FirebaseService firebaseService = FirebaseService();
 
-  // ✅ Replace with your ORS API key
-  static const String _orsApiKey =
-      '5b3ce3597851110001cf6248014503d6bb042740758494cf91a36816644b5aba3fbc5e56ca3d9bfb';
+  // ✅ Replace with your ORS API key(s)
+  static const List<String> _orsApiKeys = [
+    '5b3ce3597851110001cf6248014503d6bb042740758494cf91a36816644b5aba3fbc5e56ca3d9bfb',
+    '5b3ce3597851110001cf6248dab480f8ea3f4444be33bffab7bd37cb'
+  ];
 
-  // ✅ Get real road distance using ORS
+  // Add a static counter for round-robin API key usage
+  static int _orsApiKeyIndex = 0;
+
+  // Helper to get the next ORS API key in round-robin fashion
+  String _nextORSApiKey() {
+    final key = _orsApiKeys[_orsApiKeyIndex % _orsApiKeys.length];
+    _orsApiKeyIndex++;
+    return key;
+  }
+
+  // ✅ Get real road distance using ORS (try multiple API keys, round-robin)
   Future<double> _getORSRoadDistance(
       double lat1, double lon1, double lat2, double lon2) async {
-    final url =
-        'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$_orsApiKey&start=$lon1,$lat1&end=$lon2,$lat2';
-
-    try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final distanceMeters =
-            data['features'][0]['properties']['segments'][0]['distance'];
-        return distanceMeters / 1000.0; // return in KM
-      } else {
-        print("❌ ORS API Error: ${response.body}");
+    for (int i = 0; i < _orsApiKeys.length; i++) {
+      final apiKey = _nextORSApiKey();
+      final url =
+          'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$apiKey&start=$lon1,$lat1&end=$lon2,$lat2';
+      try {
+        final response = await http.get(Uri.parse(url));
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final distanceMeters =
+              data['features'][0]['properties']['segments'][0]['distance'];
+          return distanceMeters / 1000.0; // return in KM
+        } else {
+          print("❌ ORS API Error (key $apiKey): ${response.body}");
+        }
+      } catch (e) {
+        print("❌ ORS Request Error (key $apiKey): $e");
       }
-    } catch (e) {
-      print("❌ ORS Request Error: $e");
     }
-
-    // fallback to Haversine if API fails
+    // fallback to Haversine if all API keys fail
     return _calculateDistance(lat1, lon1, lat2, lon2);
   }
 

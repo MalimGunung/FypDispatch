@@ -39,14 +39,26 @@ class _MapScreenState extends State<MapScreen> {
   Position? currentPosition;
 
   // ORS API Key and Average Speed
-  static const String _orsApiKey =
-      '5b3ce3597851110001cf6248014503d6bb042740758494cf91a36816644b5aba3fbc5e56ca3d9bfb'; // Your ORS API Key
+  static const List<String> _orsApiKeys = [
+    '5b3ce3597851110001cf6248014503d6bb042740758494cf91a36816644b5aba3fbc5e56ca3d9bfb',
+    '5b3ce3597851110001cf6248dab480f8ea3f4444be33bffab7bd37cb'
+  ];
   static const double _averageSpeedKmH = 40.0; // Average speed in km/h
 
   String estimatedTime = "Calculating..."; // ✅ Default ETA text
   DateTime startTime = DateTime.now(); // <-- Add this line to define startTime
 
   double? _orsTotalDistanceKm; // Store ORS total distance for summary
+
+  // Add a static counter for round-robin API key usage
+  static int _orsApiKeyIndex = 0;
+
+  // Helper to get the next ORS API key in round-robin fashion
+  String _nextORSApiKey() {
+    final key = _orsApiKeys[_orsApiKeyIndex % _orsApiKeys.length];
+    _orsApiKeyIndex++;
+    return key;
+  }
 
   @override
   void initState() {
@@ -91,7 +103,7 @@ class _MapScreenState extends State<MapScreen> {
       Uri.parse(
           'https://api.openrouteservice.org/v2/directions/driving-car/geojson'),
       headers: {
-        "Authorization": _orsApiKey, // Use class constant
+        "Authorization": _nextORSApiKey(), // Use round-robin key
         "Content-Type": "application/json",
       },
       body: body,
@@ -122,46 +134,40 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> fetchEstimatedTime(LatLng origin, LatLng destination) async {
-    final String orsUrl =
-        'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$_orsApiKey&start=${origin.longitude},${origin.latitude}&end=${destination.longitude},${destination.latitude}';
-
-    try {
-      final response = await http.get(Uri.parse(orsUrl));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        // Extract distance from the summary
-        // The summary distance is for the whole route requested (origin to destination)
-        double distanceMeters =
-            data['features'][0]['properties']['summary']['distance'];
-        double distanceKm = distanceMeters / 1000.0;
-
-        double drivingHours = distanceKm / _averageSpeedKmH;
-        int minutes = (drivingHours * 60).round();
-
-        if (mounted) {
-          setState(() {
-            estimatedTime = "$minutes min";
-          });
+    // Use round-robin for each request, but fallback if error
+    for (int i = 0; i < _orsApiKeys.length; i++) {
+      final apiKey = _nextORSApiKey();
+      final String orsUrl =
+          'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$apiKey&start=${origin.longitude},${origin.latitude}&end=${destination.longitude},${destination.latitude}';
+      try {
+        final response = await http.get(Uri.parse(orsUrl));
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          double distanceMeters =
+              data['features'][0]['properties']['summary']['distance'];
+          double distanceKm = distanceMeters / 1000.0;
+          double drivingHours = distanceKm / _averageSpeedKmH;
+          int minutes = (drivingHours * 60).round();
+          if (mounted) {
+            setState(() {
+              estimatedTime = "$minutes min";
+            });
+          }
+          print(
+              "🕒 ORS Estimated Time to Next Stop: $estimatedTime ($distanceKm km)");
+          return;
+        } else {
+          print(
+              "❌ ORS API Error for ETA (key $apiKey): ${response.statusCode} - ${response.body}");
         }
-        print(
-            "🕒 ORS Estimated Time to Next Stop: $estimatedTime ($distanceKm km)");
-      } else {
-        print(
-            "❌ ORS API Error for ETA: ${response.statusCode} - ${response.body}");
-        if (mounted) {
-          setState(() {
-            estimatedTime = "Unknown";
-          });
-        }
+      } catch (e) {
+        print("❌ Exception fetching ORS ETA (key $apiKey): $e");
       }
-    } catch (e) {
-      print("❌ Exception fetching ORS ETA: $e");
-      if (mounted) {
-        setState(() {
-          estimatedTime = "Error";
-        });
-      }
+    }
+    if (mounted) {
+      setState(() {
+        estimatedTime = "Unknown";
+      });
     }
   }
 
@@ -472,20 +478,24 @@ class _MapScreenState extends State<MapScreen> {
   // --- Add this helper ---
   Future<double?> _getORSRoadDistance(
       double lat1, double lon1, double lat2, double lon2) async {
-    final url =
-        'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$_orsApiKey&start=$lon1,$lat1&end=$lon2,$lat2';
-    try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final distanceMeters =
-            data['features'][0]['properties']['segments'][0]['distance'];
-        return distanceMeters / 1000.0; // return in KM
-      } else {
-        print("❌ ORS API Error: ${response.body}");
+    // Use round-robin for each request, but fallback if error
+    for (int i = 0; i < _orsApiKeys.length; i++) {
+      final apiKey = _nextORSApiKey();
+      final url =
+          'https://api.openrouteservice.org/v2/directions/driving-car?api_key=$apiKey&start=$lon1,$lat1&end=$lon2,$lat2';
+      try {
+        final response = await http.get(Uri.parse(url));
+        if (response.statusCode == 200) {
+          final data = json.decode(response.body);
+          final distanceMeters =
+              data['features'][0]['properties']['segments'][0]['distance'];
+          return distanceMeters / 1000.0; // return in KM
+        } else {
+          print("❌ ORS API Error (key $apiKey): ${response.body}");
+        }
+      } catch (e) {
+        print("❌ ORS Request Error (key $apiKey): $e");
       }
-    } catch (e) {
-      print("❌ ORS Request Error: $e");
     }
     return null;
   }
