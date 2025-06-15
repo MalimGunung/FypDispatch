@@ -49,6 +49,7 @@ class _MapScreenState extends State<MapScreen> {
   DateTime startTime = DateTime.now(); // <-- Add this line to define startTime
 
   double? _orsTotalDistanceKm; // Store ORS total distance for summary
+  int? _originalTotalAddresses; // <-- Add this variable
 
   // Add a static counter for round-robin API key usage
   static int _orsApiKeyIndex = 0;
@@ -404,6 +405,9 @@ class _MapScreenState extends State<MapScreen> {
             .toList();
         deliveryStatus = List.generate(deliveryPoints.length, (_) => false);
 
+        // Store the original total addresses count
+        _originalTotalAddresses = deliveryPoints.length;
+
         markers.clear();
 
         // Add marker for current position (start of the route)
@@ -503,10 +507,8 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> recordRouteSummaryToFirebase(
       double distance, int time, int totalAddresses) async {
     try {
-      // Calculate the correct total addresses delivered for the summary.
-      // deliveryStatus contains only remaining (not completed) stops.
-      // To get the total delivered, use the original number of stops.
-      int deliveredCount = deliveryAddresses.length + totalAddresses;
+      // Use the original total addresses delivered for the summary.
+      final int deliveredCount = _originalTotalAddresses ?? totalAddresses;
 
       final double distanceToSave =
           (_orsTotalDistanceKm != null && _orsTotalDistanceKm! > 0)
@@ -910,7 +912,7 @@ class _MapScreenState extends State<MapScreen> {
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.blueGrey.withOpacity(0.15),
+                color: Colors.blueGrey.withAlpha((0.15 * 255).toInt()),
                 blurRadius: 24,
                 offset: Offset(0, 10),
               ),

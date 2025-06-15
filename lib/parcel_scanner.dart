@@ -286,15 +286,22 @@ class _ParcelScanningState extends State<ParcelScanning> {
         longitude,
       );
 
+      // Optimistically add the new address at the top for instant UI feedback
+      setState(() {
+        addressList.insert(0, {
+          "id": DateTime.now().millisecondsSinceEpoch.toString(), // Temporary ID
+          "address": address,
+          "latitude": latitude,
+          "longitude": longitude,
+        });
+        isLoading = false;
+      });
+
       // Invalidate optimization cache after adding a parcel
       OptimizedDeliveryScreen.invalidateCache();
 
-      await fetchStoredAddresses(); // Refresh UI, which also sets isLoading = false
-
-      // Ensure latest address is at the top after adding
-      setState(() {
-        addressList = List.from(addressList); // Defensive, in case fetch doesn't reverse
-      });
+      // Fetch from backend to ensure list is accurate and IDs are correct
+      await fetchStoredAddresses();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("✅ Parcel Added Successfully!")),
