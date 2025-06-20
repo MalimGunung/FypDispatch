@@ -115,8 +115,16 @@ class _ParcelScanningState extends State<ParcelScanning> {
     setState(() => isLoading = true);
     List<Map<String, dynamic>> storedAddresses =
         await firebaseService.getStoredAddresses(widget.userEmail);
+    // Sort by scan time (oldest first, newest last) using id as timestamp
+    storedAddresses.sort((a, b) {
+      int idA = int.tryParse(a["id"].toString()) ?? 0;
+      int idB = int.tryParse(b["id"].toString()) ?? 0;
+      return idA.compareTo(idB);
+    });
+    addressList = List.from(storedAddresses.reversed); // oldest first, newest last
+    // If still not correct, try: addressList = List.from(storedAddresses.reversed);
     setState(() {
-      addressList = List.from(storedAddresses.reversed); // Latest at top
+      addressList = addressList;
       isLoading = false;
     });
     // After fetching addresses, update ORS distances if location is available
@@ -144,6 +152,108 @@ class _ParcelScanningState extends State<ParcelScanning> {
         setState(() => isLoading = false); // Hide loader
         return;
       }
+
+      // Show confirmation dialog with editable address
+      String? confirmedAddress = await showDialog<String>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          TextEditingController controller =
+              TextEditingController(text: address);
+          final formKey = GlobalKey<FormState>();
+          return AlertDialog(
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.0)),
+            backgroundColor: Color(0xFFFDFEFE),
+            title: Row(
+              children: [
+                Icon(Icons.markunread_mailbox_outlined,
+                    color: Colors.blueAccent.shade700, size: 26),
+                SizedBox(width: 12),
+                Text(
+                  "Confirm Parcel Address",
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 18,
+                    color: Colors.blueGrey[800],
+                  ),
+                ),
+              ],
+            ),
+            content: Form(
+              key: formKey,
+              child: TextFormField(
+                controller: controller,
+                minLines: 2,
+                maxLines: 4,
+                decoration: InputDecoration(
+                  labelText: "Parcel Address",
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return "Address cannot be empty.";
+                  }
+                  if (value.trim().length < 10) {
+                    return "Address seems too short. Please provide more details.";
+                  }
+                  return null;
+                },
+                style: TextStyle(
+                  fontFamily: 'Montserrat',
+                  fontSize: 14.5,
+                  color: Colors.blueGrey[700],
+                  height: 1.4,
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                child: Text(
+                  "CANCEL",
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueGrey[600],
+                  ),
+                ),
+                onPressed: () => Navigator.of(context).pop(null),
+              ),
+              ElevatedButton(
+                child: Text(
+                  "CONFIRM",
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent.shade700,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: () {
+                  if (formKey.currentState!.validate()) {
+                    Navigator.of(context).pop(controller.text.trim());
+                  }
+                },
+              ),
+            ],
+          );
+        },
+      );
+
+      if (confirmedAddress == null) {
+        setState(() => isLoading = false);
+        return;
+      }
+      address = confirmedAddress;
+
+      // --- Remove label logic: do NOT add "scan one: ..." etc. ---
+      // address = "scan $labelWord: $address"; // <-- REMOVE this line
 
       // Improved duplicate address check
       final normalizedNewAddress = _normalizeAddress(address);
@@ -270,6 +380,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
           SnackBar(content: Text("❌ Failed to get location for this address!")),
         );
         print("❌ Geocoding Failed for Address: $address");
+        setState(() => isLoading = false); // Hide loader
         return;
       }
 
@@ -286,14 +397,15 @@ class _ParcelScanningState extends State<ParcelScanning> {
         longitude,
       );
 
-      // Optimistically add the new address at the top for instant UI feedback
+      // Optimistically add the new address at the bottom for instant UI feedback
       setState(() {
-        addressList.insert(0, {
-          "id": DateTime.now().millisecondsSinceEpoch.toString(), // Temporary ID
+        addressList.add({
+          "id": DateTime.now().millisecondsSinceEpoch.toString(),
           "address": address,
           "latitude": latitude,
           "longitude": longitude,
         });
+        // _sortAddressList(); // <-- REMOVE this line to keep scan order
         isLoading = false;
       });
 
@@ -728,7 +840,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
   String _normalizeAddress(String address) {
     return address
         .replaceAll(RegExp(r'[^\w\s]'), '') // Remove punctuation
-        .replaceAll(RegExp(r'\s+'), ' ')    // Collapse whitespace
+        .replaceAll(RegExp(r'\s+'), ' ') // Collapse whitespace
         .trim()
         .toLowerCase();
   }

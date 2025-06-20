@@ -36,7 +36,7 @@ class OptimizedDeliveryScreen extends StatefulWidget {
 class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
   List<Map<String, dynamic>> deliveryList = [];
   bool isLoading = true;
-  final AStarRouteOptimizer optimizer = AStarRouteOptimizer();
+  final GreedyOptimizer optimizer = GreedyOptimizer();
   Position? currentPosition;
   List<double?> orsDistances = [];
   double loadingProgress = 0.0;

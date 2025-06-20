@@ -22,7 +22,7 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   GoogleMapController? mapController;
   final FirebaseService firebaseService = FirebaseService();
-  final AStarRouteOptimizer optimizer = AStarRouteOptimizer();
+  final GreedyOptimizer optimizer = GreedyOptimizer();
   bool hasStartedDelivery =
       false; // ✅ Prevents auto-navigation before pressing the button
   bool isPaused = false; // ✅ Tracks whether delivery is paused
