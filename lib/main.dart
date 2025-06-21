@@ -1139,35 +1139,51 @@ class NewsCard extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: Container(
-                        padding: EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.indigo.shade200,
+                            Colors.indigo.shade400
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        child: Icon(icon, size: 20, color: Colors.indigo),
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.indigo.withOpacity(0.10),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Icon(icon, size: 24, color: Colors.white),
                       ),
                     ),
-                    SizedBox(width: 8),
-                    Expanded(
+                    SizedBox(width: 10),
+                    Flexible(
                       child: Text(
                         date,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.grey[600],
+                              color: Colors.indigo[400],
+                              fontWeight: FontWeight.w600,
                             ),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 12),
+                SizedBox(height: 14),
                 Text(
                   title,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                         fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.indigo[900],
                       ),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 2,
@@ -1175,27 +1191,29 @@ class NewsCard extends StatelessWidget {
                 SizedBox(height: 8),
                 Text(
                   snippet,
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Colors.indigo[700],
+                      ),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 3,
                 ),
-                SizedBox(height: 8),
+                SizedBox(height: 10),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TextButton(
+                    TextButton.icon(
                       onPressed: () {},
-                      style: TextButton.styleFrom(
-                        minimumSize: Size.zero,
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      ),
-                      child: Text(
-                        "Read more →",
+                      icon: Icon(Icons.arrow_forward_rounded, color: Colors.indigo, size: 18),
+                      label: Text(
+                        "Read more",
                         style: TextStyle(
                           color: Colors.indigo,
                           fontWeight: FontWeight.w600,
                         ),
+                      ),
+                      style: TextButton.styleFrom(
+                        minimumSize: Size.zero,
+                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       ),
                     ),
                   ],
