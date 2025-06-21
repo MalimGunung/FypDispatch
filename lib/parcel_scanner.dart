@@ -27,6 +27,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
   bool selectionMode = false;
   Position? currentPosition;
   List<double?> orsDistances = []; // Store ORS distances for each address
+  String searchQuery = '';
 
   @override
   void initState() {
@@ -624,7 +625,18 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                                     Color>(
                                                 Colors.blueAccent.shade200))),
                                   )
-                                : null,
+                                : addressController.text.isNotEmpty
+                                    ? IconButton(
+                                        icon: Icon(Icons.clear, color: const Color.fromARGB(255, 242, 47, 47)),
+                                        tooltip: 'Clear',
+                                        onPressed: () {
+                                          setStateDialog(() {
+                                            addressController.clear();
+                                            suggestions = [];
+                                          });
+                                        },
+                                      )
+                                    : null,
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -885,209 +897,136 @@ class _ParcelScanningState extends State<ParcelScanning> {
         colors: [
           Color(0xFFF3F5F9),
           Color(0xFFE8EFF5)
-        ], // Even softer, more neutral gradient
+        ],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ),
     );
 
+    // Filtered list for search
+    final filteredList = searchQuery.isEmpty
+        ? addressList
+        : addressList.where((item) => item["address"].toString().toLowerCase().contains(searchQuery.toLowerCase())).toList();
+
     return Scaffold(
-      extendBodyBehindAppBar: false, // AppBar has its own gradient
+      extendBodyBehindAppBar: false,
       appBar: AppBar(
-        backgroundColor: Colors.transparent, // Covered by flexibleSpace
-        elevation: 0, // No shadow, gradient provides depth
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded,
-              color: Colors.white, size: 22), // Slightly smaller
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          selectionMode
-              ? "${selectedItems.length} Item(s) Selected"
-              : "Parcel Management", // More descriptive
-          style: TextStyle(
-            fontSize: 19, // Adjusted size
-            fontWeight: FontWeight.w600, // Semi-bold
-            color: Colors.white,
-            fontFamily: 'Montserrat',
-          ),
-        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: selectionMode
+            ? IconButton(
+                icon: Icon(Icons.close, color: Colors.white),
+                onPressed: () {
+                  setState(() {
+                    selectionMode = false;
+                    selectedItems.clear();
+                  });
+                },
+              )
+            : IconButton(
+                icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 22),
+                onPressed: () => Navigator.pop(context),
+              ),
+        title: selectionMode
+            ? Row(
+                children: [
+                  Text(
+                    "${selectedItems.length} Selected",
+                    style: TextStyle(
+                      fontSize: 19,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      fontFamily: 'Montserrat',
+                    ),
+                  ),
+                  Spacer(),
+                  IconButton(
+                    icon: Icon(Icons.select_all_rounded, color: Colors.white),
+                    tooltip: selectedItems.length == addressList.length && addressList.isNotEmpty ? 'Deselect All' : 'Select All',
+                    onPressed: () {
+                      setState(() {
+                        if (selectedItems.length == addressList.length && addressList.isNotEmpty) {
+                          selectedItems.clear();
+                        } else {
+                          selectedItems = addressList.map((item) => item["id"].toString()).toSet();
+                        }
+                      });
+                    },
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.done_all_sharp, color: Colors.white),
+                    tooltip: 'Mark as Complete',
+                    onPressed: selectedItems.isNotEmpty ? () { markDeliveriesComplete(); } : null,
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.delete_forever_outlined, color: Colors.white),
+                    tooltip: 'Delete',
+                    onPressed: selectedItems.isNotEmpty ? () async {
+                      bool? confirmDelete = await showDialog<bool>(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            title: Text("Confirm Deletion", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[800])),
+                            content: Text("Delete {selectedItems.length} selected parcel(s)? This cannot be undone.", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[600])),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                            actions: <Widget>[
+                              TextButton(
+                                child: Text("CANCEL", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[500], fontWeight: FontWeight.w600)),
+                                onPressed: () => Navigator.of(context).pop(false),
+                              ),
+                              TextButton(
+                                child: Text("DELETE", style: TextStyle(fontFamily: 'Montserrat', color: Colors.red.shade600, fontWeight: FontWeight.w600)),
+                                onPressed: () => Navigator.of(context).pop(true),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                      if (confirmDelete == true) {
+                        for (var id in selectedItems) {
+                          await firebaseService.deleteParcel(widget.userEmail, id);
+                        }
+                        OptimizedDeliveryScreen.invalidateCache();
+                        setState(() {
+                          selectedItems.clear();
+                          selectionMode = false;
+                        });
+                        fetchStoredAddresses();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("✅ ${selectedItems.length} parcel(s) deleted.")),
+                        );
+                      }
+                    } : null,
+                  ),
+                ],
+              )
+            : TextField(
+                onChanged: (val) => setState(() => searchQuery = val),
+                style: TextStyle(color: Colors.white, fontFamily: 'Montserrat', fontSize: 18, fontWeight: FontWeight.w600),
+                decoration: InputDecoration(
+                  hintText: 'Search parcels...',
+                  hintStyle: TextStyle(color: Colors.white70, fontFamily: 'Montserrat'),
+                  border: InputBorder.none,
+                  prefixIcon: Icon(Icons.search, color: Colors.white70),
+                  suffixIcon: searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: Icon(Icons.clear, color: Colors.white),
+                          onPressed: () => setState(() => searchQuery = ''),
+                        )
+                      : null,
+                ),
+              ),
         centerTitle: true,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                themeBlue,
-                Colors.blueAccent.shade400
-              ], // Consistent AppBar gradient
+              colors: [themeBlue, Colors.blueAccent.shade400],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
           ),
         ),
-        actions: selectionMode
-            ? [
-                PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert, color: Colors.white),
-                  onSelected: (value) async {
-                    if (value == 'select_all') {
-                      setState(() {
-                        if (selectedItems.length == addressList.length &&
-                            addressList.isNotEmpty) {
-                          selectedItems.clear();
-                        } else {
-                          selectedItems = addressList
-                              .map((item) => item["id"].toString())
-                              .toSet();
-                        }
-                      });
-                    } else if (value == 'mark_done') {
-                      if (selectedItems.isNotEmpty) {
-                        markDeliveriesComplete();
-                      }
-                    } else if (value == 'delete') {
-                      if (selectedItems.isNotEmpty) {
-                        bool? confirmDelete = await showDialog<bool>(
-                          context: context,
-                          builder: (BuildContext context) {
-                            return AlertDialog(
-                              title: Text("Confirm Deletion",
-                                  style: TextStyle(
-                                      fontFamily: 'Montserrat',
-                                      color: Colors.blueGrey[800])),
-                              content: Text(
-                                  "Delete ${selectedItems.length} selected parcel(s)? This cannot be undone.",
-                                  style: TextStyle(
-                                      fontFamily: 'Montserrat',
-                                      color: Colors.blueGrey[600])),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(15)),
-                              actions: <Widget>[
-                                TextButton(
-                                  child: Text("CANCEL",
-                                      style: TextStyle(
-                                          fontFamily: 'Montserrat',
-                                          color: Colors.blueGrey[500],
-                                          fontWeight: FontWeight.w600)),
-                                  onPressed: () =>
-                                      Navigator.of(context).pop(false),
-                                ),
-                                TextButton(
-                                  child: Text("DELETE",
-                                      style: TextStyle(
-                                          fontFamily: 'Montserrat',
-                                          color: Colors.red.shade600,
-                                          fontWeight: FontWeight.w600)),
-                                  onPressed: () =>
-                                      Navigator.of(context).pop(true),
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                        if (confirmDelete == true) {
-                          for (var id in selectedItems) {
-                            await firebaseService.deleteParcel(
-                                widget.userEmail, id);
-                          }
-                          // Invalidate optimization cache after bulk delete
-                          OptimizedDeliveryScreen.invalidateCache();
-                          setState(() {
-                            selectedItems.clear();
-                            selectionMode = false;
-                          });
-                          fetchStoredAddresses();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text(
-                                    "✅ ${selectedItems.length} parcel(s) deleted.")),
-                          );
-                        }
-                      }
-                    } else if (value == 'cancel_selection') {
-                      setState(() {
-                        selectionMode = false;
-                        selectedItems.clear();
-                      });
-                    }
-                  },
-                  itemBuilder: (BuildContext context) =>
-                      <PopupMenuEntry<String>>[
-                    PopupMenuItem<String>(
-                      value: 'select_all',
-                      child: Row(
-                        children: [
-                          Icon(
-                            selectedItems.length == addressList.length &&
-                                    addressList.isNotEmpty
-                                ? Icons.deselect_rounded
-                                : Icons.select_all_rounded,
-                            color: Colors.blueGrey[700],
-                          ),
-                          SizedBox(width: 10),
-                          Text(
-                              selectedItems.length == addressList.length &&
-                                      addressList.isNotEmpty
-                                  ? "Deselect All"
-                                  : "Select All",
-                              style: TextStyle(fontFamily: 'Montserrat')),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'mark_done',
-                      enabled: selectedItems.isNotEmpty,
-                      child: Row(
-                        children: [
-                          Icon(Icons.done_all_sharp, color: Colors.green[600]),
-                          SizedBox(width: 10),
-                          Text("Mark Selected as Complete",
-                              style: TextStyle(fontFamily: 'Montserrat')),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'delete',
-                      enabled: selectedItems.isNotEmpty,
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete_forever_outlined,
-                              color: Colors.red[600]),
-                          SizedBox(width: 10),
-                          Text("Delete Selected",
-                              style: TextStyle(fontFamily: 'Montserrat')),
-                        ],
-                      ),
-                    ),
-                    PopupMenuItem<String>(
-                      value: 'cancel_selection',
-                      child: Row(
-                        children: [
-                          Icon(Icons.close_fullscreen_outlined,
-                              color: Colors.blueGrey[700]),
-                          SizedBox(width: 10),
-                          Text("Cancel Selection",
-                              style: TextStyle(fontFamily: 'Montserrat')),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ]
-            : [
-                // IconButton(
-                //   icon: Icon(Icons.sort_rounded, color: Colors.white), // Example: Sort action
-                //   tooltip: "Sort Parcels",
-                //   onPressed: () { /* Implement sort logic */ },
-                // ),
-                IconButton(
-                  icon: Icon(Icons.refresh_rounded, color: Colors.white),
-                  tooltip: "Refresh List",
-                  onPressed: isLoading
-                      ? null
-                      : fetchStoredAddresses, // Disable if already loading
-                ),
-              ],
+        actions: [],
       ),
       body: Container(
         decoration: bodyGradient,
@@ -1107,34 +1046,32 @@ class _ParcelScanningState extends State<ParcelScanning> {
                           color: Colors.blueGrey[500])),
                 ],
               ))
-            : addressList.isEmpty
+            : filteredList.isEmpty
                 ? Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(35.0), // Increased padding
+                      padding: const EdgeInsets.all(35.0),
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.add_to_photos_outlined,
-                              size: 60,
-                              color: Colors.blueGrey.shade300
-                                  .withOpacity(0.8)), // Different icon
+                          // Placeholder for engaging illustration
+                          Icon(Icons.local_shipping, size: 80, color: Colors.blueAccent.shade100),
                           SizedBox(height: 22),
                           Text(
-                            "No Parcels Added Yet",
+                            "No Parcels Found",
                             style: TextStyle(
-                              fontSize: 19, // Adjusted
-                              color: Colors.blueGrey[600], // Darker
+                              fontSize: 19,
+                              color: Colors.blueGrey[600],
                               fontFamily: 'Montserrat',
                               fontWeight: FontWeight.w600,
                             ),
                           ),
                           SizedBox(height: 12),
                           Text(
-                            "Use the 'Scan Parcel' button to add new delivery items to your list.",
+                            "Use the '+' button to scan and add new delivery items to your list.",
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                                fontSize: 14, // Adjusted
-                                color: Colors.blueGrey[400], // Lighter
+                                fontSize: 14,
+                                color: Colors.blueGrey[400],
                                 fontFamily: 'Montserrat',
                                 height: 1.5),
                           ),
@@ -1143,161 +1080,173 @@ class _ParcelScanningState extends State<ParcelScanning> {
                     ),
                   )
                 : RefreshIndicator(
-                    // Added RefreshIndicator
                     onRefresh: fetchStoredAddresses,
                     color: themeBlue,
                     backgroundColor: Colors.white,
                     strokeWidth: 2.5,
                     child: ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(
-                          10, 10, 10, 85), // Adjusted padding
-                      itemCount: addressList.length,
+                      padding: const EdgeInsets.fromLTRB(10, 10, 10, 85),
+                      itemCount: filteredList.length,
                       itemBuilder: (context, index) {
-                        final item = addressList[index];
+                        final item = filteredList[index];
                         final id = item["id"].toString();
                         final selected = selectedItems.contains(id);
-                        double? distance = (orsDistances.length > index)
-                            ? orsDistances[index]
-                            : null;
-
-                        return Card(
-                          elevation:
-                              selected ? 4 : 1.5, // Subtle elevation change
-                          margin: EdgeInsets.symmetric(
-                              vertical: 6), // Adjusted margin
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                                12), // Slightly less rounded
-                            side: selected
-                                ? BorderSide(
-                                    color: themeBlue.withOpacity(0.7),
-                                    width: 1.5)
-                                : BorderSide(
-                                    color: Colors.grey.shade200, width: 0.8),
-                          ),
-                          color: selected
-                              ? themeBlue.withOpacity(0.04)
-                              : Colors.white,
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onLongPress: () {
-                              setState(() {
-                                selectionMode = true;
-                                if (selected) {
-                                  selectedItems.remove(id);
-                                  if (selectedItems.isEmpty)
-                                    selectionMode = false;
-                                } else {
-                                  selectedItems.add(id);
-                                }
-                              });
-                            },
-                            onTap: () {
-                              if (selectionMode) {
-                                setState(() {
-                                  if (selected) {
-                                    selectedItems.remove(id);
-                                    if (selectedItems.isEmpty)
-                                      selectionMode = false;
-                                  } else {
-                                    selectedItems.add(id);
-                                  }
-                                });
-                              } else {
-                                editAddress(item["id"], item["address"]);
-                              }
-                            },
+                        double? distance = (orsDistances.length > index) ? orsDistances[index] : null;
+                        return Dismissible(
+                          key: Key(id),
+                          background: Container(
+                            alignment: Alignment.centerLeft,
+                            color: Colors.red.shade100,
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8.0,
-                                  vertical: 5.0), // Reduced vertical padding
-                              child: ListTile(
-                                contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6), // Adjusted padding
-                                leading: Container(
-                                  width: 42, // Slightly smaller
-                                  height: 42,
-                                  decoration: BoxDecoration(
-                                    color: selected
-                                        ? themeBlue.withOpacity(0.1)
-                                        : Colors.grey
-                                            .shade100, // More subtle selection
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(
-                                    selected
-                                        ? Icons.check_circle_outline
-                                        : Icons
-                                            .local_shipping_outlined, // Different icons
-                                    color: selected
-                                        ? themeBlue
-                                        : Colors.blueGrey[400],
-                                    size: 22, // Adjusted size
-                                  ),
+                              padding: const EdgeInsets.only(left: 20.0),
+                              child: Icon(Icons.delete, color: Colors.red.shade700),
+                            ),
+                          ),
+                          secondaryBackground: Container(
+                            alignment: Alignment.centerRight,
+                            color: Colors.blueAccent.shade100,
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 20.0),
+                              child: Icon(Icons.edit, color: Colors.blueAccent.shade700),
+                            ),
+                          ),
+                          confirmDismiss: (direction) async {
+                            if (direction == DismissDirection.startToEnd) {
+                              // Delete
+                              bool? confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: Text('Delete Parcel?', style: TextStyle(fontFamily: 'Montserrat')),
+                                  content: Text('Are you sure you want to delete this parcel?', style: TextStyle(fontFamily: 'Montserrat')),
+                                  actions: [
+                                    TextButton(child: Text('Cancel'), onPressed: () => Navigator.pop(context, false)),
+                                    TextButton(child: Text('Delete', style: TextStyle(color: Colors.red)), onPressed: () => Navigator.pop(context, true)),
+                                  ],
                                 ),
-                                title: Text(
-                                  item["address"],
-                                  style: TextStyle(
-                                    fontWeight: FontWeight
-                                        .w500, // Normal weight for better readability of long text
-                                    fontSize: 14.5, // Adjusted
-                                    color: Colors
-                                        .blueGrey[700], // Slightly lighter
-                                    fontFamily: 'Montserrat',
-                                  ),
-                                  // Removed maxLines and overflow to show full address
-                                ),
-                                subtitle: Padding(
-                                  padding: const EdgeInsets.only(
-                                      top: 5.0), // Adjusted
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.near_me_outlined,
-                                          size: 15,
-                                          color: Colors.deepPurple
-                                              .shade300), // Different icon
-                                      SizedBox(width: 5),
-                                      Text(
-                                        distance != null
-                                            ? "${distance.toStringAsFixed(1)} km away"
-                                            : "Calculating...", // More natural phrasing
-                                        style: TextStyle(
-                                          color: distance != null
-                                              ? Colors.deepPurple.shade300
-                                              : Colors.blueGrey[
-                                                  300], // Adjusted colors
-                                          fontSize: 14.5, // Adjusted
-                                          fontFamily: 'Montserrat',
-                                          fontWeight: FontWeight
-                                              .w900, // Changed from bold
-                                        ),
+                              );
+                              if (confirm == true) {
+                                await deleteAddress(id);
+                                return true;
+                              }
+                              return false;
+                            } else {
+                              // Edit
+                              editAddress(item["id"], item["address"]);
+                              return false;
+                            }
+                          },
+                          child: AnimatedContainer(
+                            duration: Duration(milliseconds: 200),
+                            curve: Curves.easeInOut,
+                            child: Card(
+                              elevation: selected ? 4 : 1.5,
+                              margin: EdgeInsets.symmetric(vertical: 6),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: selected
+                                    ? BorderSide(color: themeBlue.withOpacity(0.7), width: 1.5)
+                                    : BorderSide(color: Colors.grey.shade200, width: 0.8),
+                              ),
+                              color: selected ? themeBlue.withOpacity(0.04) : Colors.white,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onLongPress: () {
+                                  setState(() {
+                                    selectionMode = true;
+                                    if (selected) {
+                                      selectedItems.remove(id);
+                                      if (selectedItems.isEmpty) selectionMode = false;
+                                    } else {
+                                      selectedItems.add(id);
+                                    }
+                                  });
+                                  // Haptic feedback
+                                  Feedback.forLongPress(context);
+                                },
+                                onTap: () {
+                                  if (selectionMode) {
+                                    setState(() {
+                                      if (selected) {
+                                        selectedItems.remove(id);
+                                        if (selectedItems.isEmpty) selectionMode = false;
+                                      } else {
+                                        selectedItems.add(id);
+                                      }
+                                    });
+                                    Feedback.forTap(context);
+                                  } else {
+                                    editAddress(item["id"], item["address"]);
+                                  }
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 5.0),
+                                  child: ListTile(
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    leading: Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        color: selected ? themeBlue.withOpacity(0.1) : Colors.grey.shade100,
+                                        shape: BoxShape.circle,
                                       ),
-                                    ],
+                                      child: Icon(
+                                        selected ? Icons.check_circle_outline : Icons.local_shipping_outlined,
+                                        color: selected ? themeBlue : Colors.blueGrey[400],
+                                        size: 26,
+                                      ),
+                                    ),
+                                    title: Text(
+                                      item["address"],
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 15,
+                                        color: Colors.blueGrey[700],
+                                        fontFamily: 'Montserrat',
+                                      ),
+                                    ),
+                                    subtitle: Padding(
+                                      padding: const EdgeInsets.only(top: 5.0),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: distance != null ? Colors.deepPurple.shade50 : Colors.blueGrey.shade50,
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.near_me_outlined, size: 15, color: distance != null ? Colors.deepPurple.shade300 : Colors.blueGrey[300]),
+                                                SizedBox(width: 5),
+                                                Text(
+                                                  distance != null ? "${distance.toStringAsFixed(1)} km away" : "Calculating...",
+                                                  style: TextStyle(
+                                                    color: distance != null ? Colors.deepPurple.shade300 : Colors.blueGrey[300],
+                                                    fontSize: 14.5,
+                                                    fontFamily: 'Montserrat',
+                                                    fontWeight: FontWeight.w900,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    trailing: selectionMode
+                                        ? AbsorbPointer(
+                                            child: Checkbox(
+                                              value: selected,
+                                              activeColor: themeBlue,
+                                              onChanged: (bool? value) {},
+                                              visualDensity: VisualDensity.compact,
+                                              side: BorderSide(color: Colors.blueGrey.shade200, width: 1),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                                            ),
+                                          )
+                                        : Icon(Icons.chevron_right_rounded, color: Colors.blueGrey[200], size: 20),
                                   ),
                                 ),
-                                trailing: selectionMode
-                                    ? AbsorbPointer(
-                                        // Checkbox is part of the tap area
-                                        child: Checkbox(
-                                          value: selected,
-                                          activeColor: themeBlue,
-                                          onChanged: (bool? value) {
-                                            /* Handled by onTap/onLongPress */
-                                          },
-                                          visualDensity: VisualDensity.compact,
-                                          side: BorderSide(
-                                              color: Colors.blueGrey.shade200,
-                                              width: 1), // Softer border
-                                          shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(3)),
-                                        ),
-                                      )
-                                    : Icon(Icons.chevron_right_rounded,
-                                        color: Colors.blueGrey[200],
-                                        size:
-                                            20), // Chevron for edit indication
                               ),
                             ),
                           ),
@@ -1306,27 +1255,30 @@ class _ParcelScanningState extends State<ParcelScanning> {
                     ),
                   ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: scanParcel,
+        backgroundColor: themeBlue,
+        child: Icon(Icons.add, color: Colors.white),
+        tooltip: 'Scan Parcel',
+      ),
       bottomNavigationBar: BottomAppBar(
-        elevation: 10, // Standard elevation
-        color: Colors.blueAccent.shade700, // Solid white for clarity
-        shape: CircularNotchedRectangle(), // Optional: if you plan to add a FAB
+        elevation: 10,
+        color: Colors.blueAccent.shade700,
+        shape: CircularNotchedRectangle(),
         notchMargin: 5.0,
         child: Container(
-          height: 58, // Slightly reduced height
-          padding: EdgeInsets.symmetric(horizontal: 5), // Reduced padding
+          height: 58,
+          padding: EdgeInsets.symmetric(horizontal: 5),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              _buildBottomNavItem(Icons.ballot_outlined, "Optimize", 0,
-                  themeBlue), // Changed label & icon
-              _buildBottomNavItem(Icons.qr_code_scanner, "Scan New", 1,
-                  themeBlue), // Changed label & icon
-              _buildBottomNavItem(Icons.explore_outlined, "View Route", 2,
-                  themeBlue), // Changed label & icon
+              _buildBottomNavItem(Icons.ballot_outlined, "Optimize", 0, themeBlue),
+              _buildBottomNavItem(Icons.explore_outlined, "View Route", 2, themeBlue),
             ],
           ),
         ),
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endDocked,
     );
   }
 

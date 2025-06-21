@@ -68,7 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<String, dynamic>? routeSummary;
   List<Map<String, dynamic>> allRoutes = [];
   String selectedFilter = "All";
-  bool isAscending = true;
+  bool isAscending = false;
 
   @override
   void initState() {
@@ -706,116 +706,109 @@ class _HomeScreenState extends State<HomeScreen> {
 
         // Filter and Sort Options
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Improved filter dropdown with card effect
-              Card(
-                elevation: 3,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
-                margin: EdgeInsets.zero,
-                color: Colors.white,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: selectedFilter,
-                      icon: Icon(Icons.filter_alt_rounded,
-                          color: Colors.indigo[400], size: 22),
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.indigo[700],
-                        fontFamily: 'Inter',
+          padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.95),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.indigo.withOpacity(0.08)),
+            ),
+            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Filter Dropdown (minimal)
+                DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: selectedFilter,
+                    icon: Icon(Icons.filter_list_rounded, color: Colors.indigo[400], size: 20),
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.indigo[700],
+                      fontFamily: 'Inter',
+                    ),
+                    dropdownColor: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    items: [
+                      DropdownMenuItem(
+                        value: "All",
+                        child: Row(
+                          children: [
+                            Icon(Icons.all_inclusive, color: Colors.indigo[300], size: 16),
+                            SizedBox(width: 5),
+                            Text("All"),
+                          ],
+                        ),
                       ),
-                      dropdownColor: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      items: ["All", "Today", "This Week"]
-                          .map((filter) => DropdownMenuItem(
-                                value: filter,
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      filter == "All"
-                                          ? Icons.all_inclusive
-                                          : filter == "Today"
-                                              ? Icons.today_rounded
-                                              : Icons
-                                                  .calendar_view_week_rounded,
-                                      color: Colors.indigo[300],
-                                      size: 18,
-                                    ),
-                                    SizedBox(width: 7),
-                                    Text(filter),
-                                  ],
-                                ),
-                              ))
-                          .toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedFilter = value!;
-                        });
-                      },
-                    ),
-                  ),
-                ),
-              ),
-              // Improved sort button with card effect and subtle gradient
-              Card(
-                elevation: 3,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16)),
-                margin: EdgeInsets.zero,
-                child: Ink(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.indigo.withOpacity(0.09),
-                        Colors.indigo.withOpacity(0.03)
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                  ),
-                  child: TextButton.icon(
-                    icon: Icon(
-                      isAscending
-                          ? Icons.arrow_upward_rounded
-                          : Icons.arrow_downward_rounded,
-                      color: Colors.indigo[600],
-                      size: 20,
-                    ),
-                    label: Text(
-                      isAscending ? "Oldest First" : "Newest First",
-                      style: TextStyle(
-                        color: Colors.indigo[700],
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        fontFamily: 'Inter',
+                      DropdownMenuItem(
+                        value: "Today",
+                        child: Row(
+                          children: [
+                            Icon(Icons.today_rounded, color: Colors.indigo[300], size: 16),
+                            SizedBox(width: 5),
+                            Text("Today"),
+                          ],
+                        ),
                       ),
-                    ),
-                    onPressed: () {
+                      DropdownMenuItem(
+                        value: "This Week",
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_view_week_rounded, color: Colors.indigo[300], size: 16),
+                            SizedBox(width: 5),
+                            Text("This Week"),
+                          ],
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) {
                       setState(() {
-                        isAscending = !isAscending;
+                        selectedFilter = value!;
                       });
                     },
-                    style: TextButton.styleFrom(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      backgroundColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 0,
-                      shadowColor: Colors.transparent,
-                    ),
                   ),
                 ),
-              ),
-            ],
+                // Vertical divider
+                Container(
+                  height: 28,
+                  width: 1,
+                  color: Colors.indigo.withOpacity(0.08),
+                  margin: EdgeInsets.symmetric(horizontal: 8),
+                ),
+                // Sort Button (minimal)
+                TextButton.icon(
+                  icon: Icon(
+                    isAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                    color: Colors.indigo[600],
+                    size: 18,
+                  ),
+                  label: Text(
+                    isAscending ? "Oldest" : "Newest",
+                    style: TextStyle(
+                      color: Colors.indigo[700],
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                      fontFamily: 'Inter',
+                    ),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      isAscending = !isAscending;
+                    });
+                  },
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    backgroundColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         SizedBox(height: 10),
@@ -864,112 +857,123 @@ class _HomeScreenState extends State<HomeScreen> {
             return AnimatedContainer(
                 duration: Duration(milliseconds: 250),
                 curve: Curves.easeIn,
-                child: Card(
-                  elevation: 6,
-                  margin: EdgeInsets.only(bottom: 16, left: 2, right: 2),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(22),
-                    side: BorderSide(
-                        color: Colors.indigo.withOpacity(0.08), width: 1.2),
-                  ),
-                  shadowColor: Colors.indigo.withOpacity(0.10),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(22),
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.indigo.withOpacity(0.04),
-                          Colors.blue.withOpacity(0.03),
-                          Colors.white.withOpacity(0.97),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+                child: Container(
+                  margin: EdgeInsets.only(bottom: 18, left: 2, right: 2),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.indigo.shade100.withOpacity(0.7),
+                        Colors.blue.shade100.withOpacity(0.5),
+                        Colors.white.withOpacity(0.85),
+                      ],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    border: Border(
+                      left: BorderSide(
+                        color: Colors.indigo.shade400,
+                        width: 5,
                       ),
                     ),
-                    child: ListTile(
-                      contentPadding:
-                          EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                      leading: Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.indigo.shade100,
-                              Colors.indigo.shade200
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.indigo.withOpacity(0.10),
+                        blurRadius: 18,
+                        offset: Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                      child: ListTile(
+                        contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                        leading: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [
+                                Colors.indigo.shade400,
+                                Colors.blue.shade300
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.indigo.withOpacity(0.13),
+                                blurRadius: 10,
+                                offset: Offset(0, 2),
+                              ),
                             ],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.indigo.withOpacity(0.10),
-                              blurRadius: 8,
-                              offset: Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: CircleAvatar(
-                          backgroundColor: Colors.transparent,
-                          radius: 22, // smaller avatar
+                          padding: EdgeInsets.all(10),
                           child: Icon(Icons.route_outlined,
-                              color: Colors.indigo[700],
-                              size: 22), // smaller icon
+                              color: Colors.white, size: 28),
                         ),
-                      ),
-                      title: Padding(
-                        padding: const EdgeInsets.only(bottom: 2.0),
-                        child: Text(
-                          "Route on ${routeDate.toLocal().toString().split(' ')[0]}",
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 15, // smaller font
-                            color: Colors.indigo[800],
-                            letterSpacing: 0.1,
+                        title: Padding(
+                          padding: const EdgeInsets.only(bottom: 2.0),
+                          child: Text(
+                            "Route on ${routeDate.toLocal().toString().split(' ')[0]}",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                              color: Colors.indigo[900],
+                              letterSpacing: 0.2,
+                            ),
                           ),
                         ),
-                      ),
-                      subtitle: Padding(
-                        padding: const EdgeInsets.only(top: 4.0),
-                        child: Row(
-                          children: [
-                            Icon(Icons.directions_car,
-                                size: 13, color: Colors.indigo[300]),
-                            SizedBox(width: 3),
-                            Text(
-                              "${(route['distance'] as num).toStringAsFixed(1)} km",
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w600, fontSize: 13),
-                            ),
-                            SizedBox(width: 10),
-                            Icon(Icons.timer_outlined,
-                                size: 13, color: Colors.indigo[300]),
-                            SizedBox(width: 3),
-                            Text("${route['time']} min",
+                        subtitle: Padding(
+                          padding: const EdgeInsets.only(top: 4.0),
+                          child: Row(
+                            children: [
+                              Icon(Icons.directions_car,
+                                  size: 15, color: Colors.indigo[400]),
+                              SizedBox(width: 3),
+                              Text(
+                                "${(route['distance'] as num).toStringAsFixed(1)} km",
                                 style: TextStyle(
-                                    fontWeight: FontWeight.w600, fontSize: 13)),
-                            SizedBox(width: 10),
-                            Icon(Icons.location_on_outlined,
-                                size: 13, color: Colors.indigo[300]),
-                            SizedBox(width: 3),
-                            Text("${route['totalAddresses']}",
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w600, fontSize: 13)),
-                          ],
+                                    fontWeight: FontWeight.w700, fontSize: 14, color: Colors.indigo[700]),
+                              ),
+                              SizedBox(width: 12),
+                              Icon(Icons.timer_outlined,
+                                  size: 15, color: Colors.indigo[400]),
+                              SizedBox(width: 3),
+                              Text("${route['time']} min",
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w700, fontSize: 14, color: Colors.indigo[700])),
+                              SizedBox(width: 12),
+                              Icon(Icons.location_on_outlined,
+                                  size: 15, color: Colors.indigo[400]),
+                              SizedBox(width: 3),
+                              Text("${route['totalAddresses']}",
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w700, fontSize: 14, color: Colors.indigo[700])),
+                            ],
+                          ),
                         ),
-                      ),
-                      trailing: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.indigo.withOpacity(0.08),
-                          borderRadius: BorderRadius.circular(10),
+                        trailing: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.indigo.withOpacity(0.08),
+                                blurRadius: 6,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                          child: Icon(Icons.arrow_forward_ios,
+                              size: 15, color: Colors.indigo[400]),
                         ),
-                        padding:
-                            EdgeInsets.symmetric(horizontal: 7, vertical: 6),
-                        child: Icon(Icons.arrow_forward_ios,
-                            size: 13, color: Colors.indigo[400]),
+                        onTap: () {
+                          // Optional: Navigate to a detailed view of the route
+                        },
                       ),
-                      onTap: () {
-                        // Optional: Navigate to a detailed view of the route
-                      },
                     ),
                   ),
                 ));

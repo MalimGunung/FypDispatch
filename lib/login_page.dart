@@ -97,55 +97,71 @@ class _LoginPageState extends State<LoginPage> {
               constraints:
                   BoxConstraints(maxWidth: 400), // Max width for larger screens
               child: Container(
-                padding: EdgeInsets.symmetric(
-                    horizontal: 28, vertical: 36), // Adjusted padding
+                constraints: BoxConstraints(maxWidth: 360), // Slightly less wide for focus
+                padding: EdgeInsets.symmetric(horizontal: 22, vertical: 30), // Reduced padding
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius:
-                      BorderRadius.circular(24), // Softer border radius
+                  gradient: LinearGradient(
+                    colors: [Colors.white, Colors.grey[50]!],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: Colors.indigo.withOpacity(0.08), width: 1.2),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey
-                          .withOpacity(0.15), // Softer, more diffused shadow
-                      blurRadius: 30,
-                      offset: Offset(0, 10),
+                      color: Colors.indigo.withOpacity(0.07),
+                      blurRadius: 24,
+                      offset: Offset(0, 8),
                     ),
                   ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Logo - Consider using a local asset for better performance and offline availability
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.network(
-                        'https://i.imghippo.com/files/khhH3534CU.jpg',
-                        height: 90,
-                        width: 90,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => Icon(
-                          Icons.image_not_supported,
-                          size: 90,
-                          color: Colors.grey[300],
-                        ),
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return SizedBox(
-                            height: 90,
-                            width: 90,
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                value: loadingProgress.expectedTotalBytes != null
-                                    ? loadingProgress.cumulativeBytesLoaded /
-                                        (loadingProgress.expectedTotalBytes ?? 1)
-                                    : null,
+                    // Logo with border and subtle shadow
+                    Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.indigo.withOpacity(0.13), width: 2),
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.indigo.withOpacity(0.06),
+                            blurRadius: 8,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.network(
+                          'https://i.imghippo.com/files/khhH3534CU.jpg',
+                          height: 80,
+                          width: 80,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Icon(
+                            Icons.image_not_supported,
+                            size: 80,
+                            color: Colors.grey[300],
+                          ),
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return SizedBox(
+                              height: 80,
+                              width: 80,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          (loadingProgress.expectedTotalBytes ?? 1)
+                                      : null,
+                                ),
                               ),
-                            ),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       ),
                     ),
-                    SizedBox(height: 20),
+                    SizedBox(height: 18),
                     Text(
                       "Smart Dispatch",
                       style: TextStyle(
