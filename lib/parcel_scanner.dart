@@ -111,23 +111,23 @@ class _ParcelScanningState extends State<ParcelScanning> {
     });
   }
 
-  // ✅ Fetch stored addresses from Firebase
+// ✅ Fetch stored addresses from Firebase - CORRECTED VERSION
   Future<void> fetchStoredAddresses() async {
     setState(() => isLoading = true);
     List<Map<String, dynamic>> storedAddresses =
         await firebaseService.getStoredAddresses(widget.userEmail);
-    // Sort by scan time (oldest first, newest last) using id as timestamp
-    storedAddresses.sort((a, b) {
-      int idA = int.tryParse(a["id"].toString()) ?? 0;
-      int idB = int.tryParse(b["id"].toString()) ?? 0;
-      return idA.compareTo(idB);
-    });
-    addressList = List.from(storedAddresses.reversed); // oldest first, newest last
-    // If still not correct, try: addressList = List.from(storedAddresses.reversed);
+
+    // Assign scanOrder based on the order fetched (already ordered by timestamp)
+    for (int i = 0; i < storedAddresses.length; i++) {
+      storedAddresses[i]["scanOrder"] = i + 1; // Start from 1
+    }
+
     setState(() {
-      addressList = addressList;
+      addressList =
+          storedAddresses; // Use the ordered addresses with correct scan order
       isLoading = false;
     });
+
     // After fetching addresses, update ORS distances if location is available
     if (currentPosition != null && addressList.isNotEmpty) {
       await _updateORSDistances();
@@ -253,9 +253,6 @@ class _ParcelScanningState extends State<ParcelScanning> {
       }
       address = confirmedAddress;
 
-      // --- Remove label logic: do NOT add "scan one: ..." etc. ---
-      // address = "scan $labelWord: $address"; // <-- REMOVE this line
-
       // Improved duplicate address check
       final normalizedNewAddress = _normalizeAddress(address);
       bool isDuplicate = addressList.any((existingAddress) =>
@@ -278,24 +275,24 @@ class _ParcelScanningState extends State<ParcelScanning> {
               title: Row(
                 children: [
                   Icon(
-                    Icons.copy_all_outlined, // Changed icon
-                    color: Colors.orange.shade600, // Slightly softer orange
+                    Icons.copy_all_outlined,
+                    color: Colors.orange.shade600,
                     size: 26,
                   ),
                   SizedBox(width: 12),
                   Text(
-                    "Duplicate Parcel", // More concise
+                    "Duplicate Parcel",
                     style: TextStyle(
                       fontFamily: 'Montserrat',
-                      fontWeight: FontWeight.w600, // Semi-bold
+                      fontWeight: FontWeight.w600,
                       fontSize: 18,
-                      color: Colors.blueGrey[800], // Darker for contrast
+                      color: Colors.blueGrey[800],
                     ),
                   ),
                 ],
               ),
               content: Column(
-                mainAxisSize: MainAxisSize.min, // Important for content sizing
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -303,7 +300,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
                     style: TextStyle(
                       fontFamily: 'Montserrat',
                       fontSize: 14,
-                      color: Colors.blueGrey[600], // Softer text color
+                      color: Colors.blueGrey[600],
                       height: 1.5,
                     ),
                   ),
@@ -311,8 +308,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
                   Container(
                     padding: EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color:
-                          Colors.orange.withOpacity(0.05), // Subtle highlight
+                      color: Colors.orange.withOpacity(0.05),
                       borderRadius: BorderRadius.circular(8),
                       border:
                           Border.all(color: Colors.orange.shade100, width: 1),
@@ -322,11 +318,11 @@ class _ParcelScanningState extends State<ParcelScanning> {
                       style: TextStyle(
                         fontFamily: 'Montserrat',
                         fontSize: 14,
-                        color: Colors.orange.shade800, // Emphasize address
+                        color: Colors.orange.shade800,
                         fontWeight: FontWeight.w500,
                         height: 1.4,
                       ),
-                      textAlign: TextAlign.center, // Center the address
+                      textAlign: TextAlign.center,
                     ),
                   ),
                   SizedBox(height: 16),
@@ -352,11 +348,11 @@ class _ParcelScanningState extends State<ParcelScanning> {
                         Colors.blueAccent.shade700.withOpacity(0.1),
                   ),
                   child: Text(
-                    "GOT IT", // More modern CTA
+                    "GOT IT",
                     style: TextStyle(
                       fontFamily: 'Montserrat',
                       fontWeight: FontWeight.bold,
-                      color: Colors.blueAccent.shade700, // Theme color
+                      color: Colors.blueAccent.shade700,
                       fontSize: 14,
                       letterSpacing: 0.5,
                     ),
@@ -398,29 +394,40 @@ class _ParcelScanningState extends State<ParcelScanning> {
         longitude,
       );
 
-      // Optimistically add the new address at the bottom for instant UI feedback
-      setState(() {
-        addressList.add({
-          "id": DateTime.now().millisecondsSinceEpoch.toString(),
-          "address": address,
-          "latitude": latitude,
-          "longitude": longitude,
-        });
-        // _sortAddressList(); // <-- REMOVE this line to keep scan order
-        isLoading = false;
-      });
+// Remove the optimistic update section and just refresh from Firebase
+      setState(() => isLoading = false);
 
-      // Invalidate optimization cache after adding a parcel
+// Invalidate optimization cache after adding a parcel
       OptimizedDeliveryScreen.invalidateCache();
 
-      // Fetch from backend to ensure list is accurate and IDs are correct
+// Fetch from backend to ensure list is accurate and IDs are correct
       await fetchStoredAddresses();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("✅ Parcel Added Successfully!")),
       );
-      // isLoading is set to false by fetchStoredAddresses
     }
+  }
+
+  // Helper method to get scan order display text
+  String getScanOrderText(int scanOrder) {
+    return "Scan $scanOrder";
+  }
+
+  // Helper method to get scan order color
+  Color getScanOrderColor(int scanOrder) {
+    // Use different colors for different scan orders
+    List<Color> colors = [
+      Colors.blue.shade600,
+      Colors.green.shade600,
+      Colors.orange.shade600,
+      Colors.purple.shade600,
+      Colors.red.shade600,
+      Colors.teal.shade600,
+      Colors.indigo.shade600,
+      Colors.pink.shade600,
+    ];
+    return colors[(scanOrder - 1) % colors.length];
   }
 
   // ✅ Convert address to latitude and longitude
@@ -465,7 +472,6 @@ class _ParcelScanningState extends State<ParcelScanning> {
       debounceTimer = _DebounceTimer(Duration(milliseconds: 400), () async {
         final int requestId = ++lastRequestId;
         if (query.trim().length < 3) {
-          // Minimum characters to trigger search
           setStateDialog(() {
             suggestions = [];
             isLoadingSuggestions = false;
@@ -484,7 +490,6 @@ class _ParcelScanningState extends State<ParcelScanning> {
           List<String> newSuggestions = [];
           if (locations.isNotEmpty) {
             for (var loc in locations.take(5)) {
-              // Limit suggestions
               final placemarks =
                   await placemarkFromCoordinates(loc.latitude, loc.longitude);
               if (placemarks.isNotEmpty) {
@@ -511,13 +516,12 @@ class _ParcelScanningState extends State<ParcelScanning> {
                       .toList()
                       .join(', ');
                   if (addr.isNotEmpty && !newSuggestions.contains(addr))
-                    newSuggestions.add(addr); // Ensure unique suggestions
+                    newSuggestions.add(addr);
                 }
               }
             }
           }
           if (requestId == lastRequestId) {
-            // Ensure this is the latest request
             setStateDialog(() {
               suggestions = newSuggestions.toSet().toList();
               isLoadingSuggestions = false;
@@ -537,27 +541,23 @@ class _ParcelScanningState extends State<ParcelScanning> {
 
     showDialog(
       context: context,
-      barrierDismissible: true, // Allow dismissing by tapping outside
+      barrierDismissible: true,
       builder: (context) {
         return StatefulBuilder(
-          // Use StatefulBuilder for dialog's own state
           builder: (context, setStateDialog) {
             return Dialog(
               shape: RoundedRectangleBorder(
-                  borderRadius:
-                      BorderRadius.circular(16)), // Standardized radius
+                  borderRadius: BorderRadius.circular(16)),
               elevation: 5,
-              backgroundColor: Color(0xFFFDFEFE), // Slightly off-white
+              backgroundColor: Color(0xFFFDFEFE),
               child: SingleChildScrollView(
-                // Important for small screens with keyboard
                 child: Padding(
-                  padding: const EdgeInsets.all(22.0), // Consistent padding
+                  padding: const EdgeInsets.all(22.0),
                   child: Form(
                     key: formKey,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment:
-                          CrossAxisAlignment.stretch, // Stretch buttons
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Container(
                           padding: EdgeInsets.all(10),
@@ -574,7 +574,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
-                            fontSize: 18, // Slightly reduced
+                            fontSize: 18,
                             fontFamily: 'Montserrat',
                             color: Colors.blueGrey[800],
                           ),
@@ -583,7 +583,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
                         TextFormField(
                           controller: addressController,
                           minLines: 2,
-                          maxLines: 4, // Max 4 lines for consistency
+                          maxLines: 4,
                           keyboardType: TextInputType.multiline,
                           textCapitalization: TextCapitalization.words,
                           decoration: InputDecoration(
@@ -609,7 +609,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                     color: Colors.blueAccent.shade400,
                                     width: 1.5)),
                             filled: true,
-                            fillColor: Colors.white, // Cleaner fill
+                            fillColor: Colors.white,
                             contentPadding: EdgeInsets.symmetric(
                                 horizontal: 14, vertical: 12),
                             alignLabelWithHint: true,
@@ -627,7 +627,9 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                   )
                                 : addressController.text.isNotEmpty
                                     ? IconButton(
-                                        icon: Icon(Icons.clear, color: const Color.fromARGB(255, 242, 47, 47)),
+                                        icon: Icon(Icons.clear,
+                                            color: const Color.fromARGB(
+                                                255, 242, 47, 47)),
                                         tooltip: 'Clear',
                                         onPressed: () {
                                           setStateDialog(() {
@@ -649,9 +651,9 @@ class _ParcelScanningState extends State<ParcelScanning> {
                           },
                           style: TextStyle(
                             fontFamily: 'Montserrat',
-                            fontSize: 14.5, // Adjusted
+                            fontSize: 14.5,
                             color: Colors.blueGrey[700],
-                            height: 1.4, // Line height
+                            height: 1.4,
                           ),
                           onChanged: (value) {
                             fetchSuggestionsWithDebounce(value, setStateDialog);
@@ -659,19 +661,15 @@ class _ParcelScanningState extends State<ParcelScanning> {
                         ),
                         if (suggestions.isNotEmpty)
                           Container(
-                            margin: EdgeInsets.only(
-                                top: 8, bottom: 8), // Adjusted margin
-                            constraints: BoxConstraints(
-                                maxHeight: 120), // Adjusted height
+                            margin: EdgeInsets.only(top: 8, bottom: 8),
+                            constraints: BoxConstraints(maxHeight: 120),
                             decoration: BoxDecoration(
-                                color: Colors.grey
-                                    .shade50, // Lighter background for suggestions
+                                color: Colors.grey.shade50,
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
                                     color: Colors.blueGrey.shade100
                                         .withOpacity(0.7))),
                             child: ListView.separated(
-                              // Added separator
                               shrinkWrap: true,
                               itemCount: suggestions.length,
                               separatorBuilder: (_, __) => Divider(
@@ -681,8 +679,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                       .withOpacity(0.5)),
                               itemBuilder: (context, idx) {
                                 return InkWell(
-                                  borderRadius: BorderRadius.circular(
-                                      6), // Match inner radius
+                                  borderRadius: BorderRadius.circular(6),
                                   onTap: () {
                                     setStateDialog(() {
                                       addressController.text = suggestions[idx];
@@ -691,23 +688,19 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                               TextPosition(
                                                   offset: addressController
                                                       .text.length));
-                                      suggestions =
-                                          []; // Clear suggestions after selection
+                                      suggestions = [];
                                     });
                                   },
                                   child: Padding(
                                     padding: const EdgeInsets.symmetric(
-                                        horizontal: 12.0,
-                                        vertical: 9.0), // Adjusted padding
+                                        horizontal: 12.0, vertical: 9.0),
                                     child: Text(
                                       suggestions[idx],
                                       style: TextStyle(
                                           fontFamily: 'Montserrat',
                                           fontSize: 13,
-                                          color: Colors
-                                              .blueGrey[700]), // Adjusted style
-                                      maxLines:
-                                          1, // Ensure single line for cleaner look
+                                          color: Colors.blueGrey[700]),
+                                      maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
@@ -715,7 +708,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
                               },
                             ),
                           ),
-                        SizedBox(height: 24), // Increased spacing
+                        SizedBox(height: 24),
                         Row(
                           children: [
                             Expanded(
@@ -737,7 +730,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                 ),
                               ),
                             ),
-                            SizedBox(width: 12), // Increased spacing
+                            SizedBox(width: 12),
                             Expanded(
                               child: ElevatedButton.icon(
                                 icon: Icon(Icons.save_alt_rounded, size: 16),
@@ -751,7 +744,6 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                   if (formKey.currentState!.validate()) {
                                     String newAddress =
                                         addressController.text.trim();
-                                    // Show loading indicator
                                     showDialog(
                                       context: context,
                                       barrierDismissible: false,
@@ -790,8 +782,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
 
                                     var coordinates =
                                         await getCoordinates(newAddress);
-                                    Navigator.pop(
-                                        context); // Dismiss loading indicator
+                                    Navigator.pop(context);
 
                                     if (coordinates != null) {
                                       await firebaseService.updateParcel(
@@ -801,11 +792,9 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                         coordinates["latitude"]!,
                                         coordinates["longitude"]!,
                                       );
-                                      // Invalidate optimization cache after editing a parcel
                                       OptimizedDeliveryScreen.invalidateCache();
-                                      await fetchStoredAddresses(); // Refresh list and distances
-                                      Navigator.pop(
-                                          context); // Dismiss edit dialog
+                                      await fetchStoredAddresses();
+                                      Navigator.pop(context);
                                       ScaffoldMessenger.of(context)
                                           .showSnackBar(
                                         SnackBar(
@@ -825,11 +814,9 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.blueAccent.shade700,
                                   foregroundColor: Colors.white,
-                                  padding: EdgeInsets.symmetric(
-                                      vertical: 12), // Consistent padding
+                                  padding: EdgeInsets.symmetric(vertical: 12),
                                   shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                          8)), // Consistent radius
+                                      borderRadius: BorderRadius.circular(8)),
                                   elevation: 2,
                                 ),
                               ),
@@ -894,19 +881,23 @@ class _ParcelScanningState extends State<ParcelScanning> {
     final themeBlue = Colors.blueAccent.shade700;
     final bodyGradient = BoxDecoration(
       gradient: LinearGradient(
-        colors: [
-          Color(0xFFF3F5F9),
-          Color(0xFFE8EFF5)
-        ],
+        colors: [Color(0xFFF3F5F9), Color(0xFFE8EFF5)],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ),
     );
 
     // Filtered list for search
+    // Filtered list for search - maintain scan order
     final filteredList = searchQuery.isEmpty
         ? addressList
-        : addressList.where((item) => item["address"].toString().toLowerCase().contains(searchQuery.toLowerCase())).toList();
+        : addressList
+            .where((item) => item["address"]
+                .toString()
+                .toLowerCase()
+                .contains(searchQuery.toLowerCase()))
+            .toList()
+      ..sort((a, b) => (a["scanOrder"] as int).compareTo(b["scanOrder"] as int));
 
     return Scaffold(
       extendBodyBehindAppBar: false,
@@ -924,7 +915,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
                 },
               )
             : IconButton(
-                icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 22),
+                icon: Icon(Icons.arrow_back_ios_new_rounded,
+                    color: Colors.white, size: 22),
                 onPressed: () => Navigator.pop(context),
               ),
         title: selectionMode
@@ -942,13 +934,19 @@ class _ParcelScanningState extends State<ParcelScanning> {
                   Spacer(),
                   IconButton(
                     icon: Icon(Icons.select_all_rounded, color: Colors.white),
-                    tooltip: selectedItems.length == addressList.length && addressList.isNotEmpty ? 'Deselect All' : 'Select All',
+                    tooltip: selectedItems.length == addressList.length &&
+                            addressList.isNotEmpty
+                        ? 'Deselect All'
+                        : 'Select All',
                     onPressed: () {
                       setState(() {
-                        if (selectedItems.length == addressList.length && addressList.isNotEmpty) {
+                        if (selectedItems.length == addressList.length &&
+                            addressList.isNotEmpty) {
                           selectedItems.clear();
                         } else {
-                          selectedItems = addressList.map((item) => item["id"].toString()).toSet();
+                          selectedItems = addressList
+                              .map((item) => item["id"].toString())
+                              .toSet();
                         }
                       });
                     },
@@ -956,56 +954,89 @@ class _ParcelScanningState extends State<ParcelScanning> {
                   IconButton(
                     icon: Icon(Icons.done_all_sharp, color: Colors.white),
                     tooltip: 'Mark as Complete',
-                    onPressed: selectedItems.isNotEmpty ? () { markDeliveriesComplete(); } : null,
+                    onPressed: selectedItems.isNotEmpty
+                        ? () {
+                            markDeliveriesComplete();
+                          }
+                        : null,
                   ),
                   IconButton(
-                    icon: Icon(Icons.delete_forever_outlined, color: Colors.white),
+                    icon: Icon(Icons.delete_forever_outlined,
+                        color: Colors.white),
                     tooltip: 'Delete',
-                    onPressed: selectedItems.isNotEmpty ? () async {
-                      bool? confirmDelete = await showDialog<bool>(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: Text("Confirm Deletion", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[800])),
-                            content: Text("Delete {selectedItems.length} selected parcel(s)? This cannot be undone.", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[600])),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                            actions: <Widget>[
-                              TextButton(
-                                child: Text("CANCEL", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[500], fontWeight: FontWeight.w600)),
-                                onPressed: () => Navigator.of(context).pop(false),
-                              ),
-                              TextButton(
-                                child: Text("DELETE", style: TextStyle(fontFamily: 'Montserrat', color: Colors.red.shade600, fontWeight: FontWeight.w600)),
-                                onPressed: () => Navigator.of(context).pop(true),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                      if (confirmDelete == true) {
-                        for (var id in selectedItems) {
-                          await firebaseService.deleteParcel(widget.userEmail, id);
-                        }
-                        OptimizedDeliveryScreen.invalidateCache();
-                        setState(() {
-                          selectedItems.clear();
-                          selectionMode = false;
-                        });
-                        fetchStoredAddresses();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("✅ ${selectedItems.length} parcel(s) deleted.")),
-                        );
-                      }
-                    } : null,
+                    onPressed: selectedItems.isNotEmpty
+                        ? () async {
+                            bool? confirmDelete = await showDialog<bool>(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: Text("Confirm Deletion",
+                                      style: TextStyle(
+                                          fontFamily: 'Montserrat',
+                                          color: Colors.blueGrey[800])),
+                                  content: Text(
+                                      "Delete ${selectedItems.length} selected parcel(s)? This cannot be undone.",
+                                      style: TextStyle(
+                                          fontFamily: 'Montserrat',
+                                          color: Colors.blueGrey[600])),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15)),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      child: Text("CANCEL",
+                                          style: TextStyle(
+                                              fontFamily: 'Montserrat',
+                                              color: Colors.blueGrey[500],
+                                              fontWeight: FontWeight.w600)),
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(false),
+                                    ),
+                                    TextButton(
+                                      child: Text("DELETE",
+                                          style: TextStyle(
+                                              fontFamily: 'Montserrat',
+                                              color: Colors.red.shade600,
+                                              fontWeight: FontWeight.w600)),
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(true),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                            if (confirmDelete == true) {
+                              for (var id in selectedItems) {
+                                await firebaseService.deleteParcel(
+                                    widget.userEmail, id);
+                              }
+                              OptimizedDeliveryScreen.invalidateCache();
+                              setState(() {
+                                selectedItems.clear();
+                                selectionMode = false;
+                              });
+                              fetchStoredAddresses();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text(
+                                        "✅ ${selectedItems.length} parcel(s) deleted.")),
+                              );
+                            }
+                          }
+                        : null,
                   ),
                 ],
               )
             : TextField(
                 onChanged: (val) => setState(() => searchQuery = val),
-                style: TextStyle(color: Colors.white, fontFamily: 'Montserrat', fontSize: 18, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Montserrat',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600),
                 decoration: InputDecoration(
                   hintText: 'Search parcels...',
-                  hintStyle: TextStyle(color: Colors.white70, fontFamily: 'Montserrat'),
+                  hintStyle: TextStyle(
+                      color: Colors.white70, fontFamily: 'Montserrat'),
                   border: InputBorder.none,
                   prefixIcon: Icon(Icons.search, color: Colors.white70),
                   suffixIcon: searchQuery.isNotEmpty
@@ -1054,7 +1085,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           // Placeholder for engaging illustration
-                          Icon(Icons.local_shipping, size: 80, color: Colors.blueAccent.shade100),
+                          Icon(Icons.local_shipping,
+                              size: 80, color: Colors.blueAccent.shade100),
                           SizedBox(height: 22),
                           Text(
                             "No Parcels Found",
@@ -1091,7 +1123,9 @@ class _ParcelScanningState extends State<ParcelScanning> {
                         final item = filteredList[index];
                         final id = item["id"].toString();
                         final selected = selectedItems.contains(id);
-                        double? distance = (orsDistances.length > index) ? orsDistances[index] : null;
+                        double? distance = (orsDistances.length > index)
+                            ? orsDistances[index]
+                            : null;
                         return Dismissible(
                           key: Key(id),
                           background: Container(
@@ -1099,7 +1133,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
                             color: Colors.red.shade100,
                             child: Padding(
                               padding: const EdgeInsets.only(left: 20.0),
-                              child: Icon(Icons.delete, color: Colors.red.shade700),
+                              child: Icon(Icons.delete,
+                                  color: Colors.red.shade700),
                             ),
                           ),
                           secondaryBackground: Container(
@@ -1107,7 +1142,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
                             color: Colors.blueAccent.shade100,
                             child: Padding(
                               padding: const EdgeInsets.only(right: 20.0),
-                              child: Icon(Icons.edit, color: Colors.blueAccent.shade700),
+                              child: Icon(Icons.edit,
+                                  color: Colors.blueAccent.shade700),
                             ),
                           ),
                           confirmDismiss: (direction) async {
@@ -1116,11 +1152,24 @@ class _ParcelScanningState extends State<ParcelScanning> {
                               bool? confirm = await showDialog<bool>(
                                 context: context,
                                 builder: (context) => AlertDialog(
-                                  title: Text('Delete Parcel?', style: TextStyle(fontFamily: 'Montserrat')),
-                                  content: Text('Are you sure you want to delete this parcel?', style: TextStyle(fontFamily: 'Montserrat')),
+                                  title: Text('Delete Parcel?',
+                                      style:
+                                          TextStyle(fontFamily: 'Montserrat')),
+                                  content: Text(
+                                      'Are you sure you want to delete this parcel?',
+                                      style:
+                                          TextStyle(fontFamily: 'Montserrat')),
                                   actions: [
-                                    TextButton(child: Text('Cancel'), onPressed: () => Navigator.pop(context, false)),
-                                    TextButton(child: Text('Delete', style: TextStyle(color: Colors.red)), onPressed: () => Navigator.pop(context, true)),
+                                    TextButton(
+                                        child: Text('Cancel'),
+                                        onPressed: () =>
+                                            Navigator.pop(context, false)),
+                                    TextButton(
+                                        child: Text('Delete',
+                                            style:
+                                                TextStyle(color: Colors.red)),
+                                        onPressed: () =>
+                                            Navigator.pop(context, true)),
                                   ],
                                 ),
                               );
@@ -1144,10 +1193,16 @@ class _ParcelScanningState extends State<ParcelScanning> {
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                                 side: selected
-                                    ? BorderSide(color: themeBlue.withOpacity(0.7), width: 1.5)
-                                    : BorderSide(color: Colors.grey.shade200, width: 0.8),
+                                    ? BorderSide(
+                                        color: themeBlue.withOpacity(0.7),
+                                        width: 1.5)
+                                    : BorderSide(
+                                        color: Colors.grey.shade200,
+                                        width: 0.8),
                               ),
-                              color: selected ? themeBlue.withOpacity(0.04) : Colors.white,
+                              color: selected
+                                  ? themeBlue.withOpacity(0.04)
+                                  : Colors.white,
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(12),
                                 onLongPress: () {
@@ -1155,7 +1210,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                     selectionMode = true;
                                     if (selected) {
                                       selectedItems.remove(id);
-                                      if (selectedItems.isEmpty) selectionMode = false;
+                                      if (selectedItems.isEmpty)
+                                        selectionMode = false;
                                     } else {
                                       selectedItems.add(id);
                                     }
@@ -1168,7 +1224,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                     setState(() {
                                       if (selected) {
                                         selectedItems.remove(id);
-                                        if (selectedItems.isEmpty) selectionMode = false;
+                                        if (selectedItems.isEmpty)
+                                          selectionMode = false;
                                       } else {
                                         selectedItems.add(id);
                                       }
@@ -1179,59 +1236,140 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                   }
                                 },
                                 child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 5.0),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8.0, vertical: 5.0),
                                   child: ListTile(
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    contentPadding: EdgeInsets.symmetric(
+                                        horizontal: 10, vertical: 6),
                                     leading: Container(
                                       width: 48,
                                       height: 48,
                                       decoration: BoxDecoration(
-                                        color: selected ? themeBlue.withOpacity(0.1) : Colors.grey.shade100,
+                                        color: selected
+                                            ? themeBlue.withOpacity(0.1)
+                                            : getScanOrderColor(
+                                                    item["scanOrder"])
+                                                .withOpacity(0.1),
                                         shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: selected
+                                              ? themeBlue
+                                              : getScanOrderColor(
+                                                  item["scanOrder"]),
+                                          width: 2,
+                                        ),
                                       ),
-                                      child: Icon(
-                                        selected ? Icons.check_circle_outline : Icons.local_shipping_outlined,
-                                        color: selected ? themeBlue : Colors.blueGrey[400],
-                                        size: 26,
+                                      child: Center(
+                                        child: selected
+                                            ? Icon(Icons.check_circle,
+                                                color: themeBlue, size: 24)
+                                            : Text(
+                                                "${item["scanOrder"]}",
+                                                style: TextStyle(
+                                                  color: getScanOrderColor(
+                                                      item["scanOrder"]),
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontFamily: 'Montserrat',
+                                                ),
+                                              ),
                                       ),
                                     ),
-                                    title: Text(
-                                      item["address"],
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 15,
-                                        color: Colors.blueGrey[700],
-                                        fontFamily: 'Montserrat',
-                                      ),
-                                    ),
-                                    subtitle: Padding(
-                                      padding: const EdgeInsets.only(top: 5.0),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: distance != null ? Colors.deepPurple.shade50 : Colors.blueGrey.shade50,
-                                              borderRadius: BorderRadius.circular(20),
-                                            ),
-                                            child: Row(
-                                              children: [
-                                                Icon(Icons.near_me_outlined, size: 15, color: distance != null ? Colors.deepPurple.shade300 : Colors.blueGrey[300]),
-                                                SizedBox(width: 5),
-                                                Text(
-                                                  distance != null ? "${distance.toStringAsFixed(1)} km away" : "Calculating...",
-                                                  style: TextStyle(
-                                                    color: distance != null ? Colors.deepPurple.shade300 : Colors.blueGrey[300],
-                                                    fontSize: 14.5,
-                                                    fontFamily: 'Montserrat',
-                                                    fontWeight: FontWeight.w900,
+                                    // The correct parameter name is 'title'
+                                    title: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item["address"],
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 15,
+                                            color: Colors.blueGrey[700],
+                                            fontFamily: 'Montserrat',
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.only(top: 5.0),
+                                          child: Row(
+                                            children: [
+                                              Container(
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: getScanOrderColor(
+                                                          item["scanOrder"])
+                                                      .withOpacity(0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                  border: Border.all(
+                                                    color: getScanOrderColor(
+                                                            item["scanOrder"])
+                                                        .withOpacity(0.3),
+                                                    width: 1,
                                                   ),
                                                 ),
-                                              ],
-                                            ),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.label_outline,
+                                                        size: 14,
+                                                        color: getScanOrderColor(
+                                                            item["scanOrder"])),
+                                                    SizedBox(width: 4),
+                                                    Text(
+                                                      getScanOrderText(
+                                                          item["scanOrder"]),
+                                                      style: TextStyle(
+                                                        color: getScanOrderColor(
+                                                            item["scanOrder"]),
+                                                        fontSize: 12,
+                                                        fontFamily: 'Montserrat',
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                              SizedBox(width: 8),
+                                              Container(
+                                                padding: EdgeInsets.symmetric(
+                                                    horizontal: 10, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: distance != null
+                                                      ? Colors.deepPurple.shade50
+                                                      : Colors.blueGrey.shade50,
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.near_me_outlined,
+                                                        size: 15,
+                                                        color: distance != null
+                                                            ? Colors
+                                                                .deepPurple.shade300
+                                                            : Colors.blueGrey[300]),
+                                                    SizedBox(width: 5),
+                                                    Text(
+                                                      distance != null
+                                                          ? "${distance.toStringAsFixed(1)} km away"
+                                                          : "Calculating...",
+                                                      style: TextStyle(
+                                                        color: distance != null
+                                                            ? Colors
+                                                                .deepPurple.shade300
+                                                            : Colors.blueGrey[300],
+                                                        fontSize: 12,
+                                                        fontFamily: 'Montserrat',
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ],
                                           ),
-                                        ],
-                                      ),
+                                        ),
+                                      ],
                                     ),
                                     trailing: selectionMode
                                         ? AbsorbPointer(
@@ -1239,17 +1377,25 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                               value: selected,
                                               activeColor: themeBlue,
                                               onChanged: (bool? value) {},
-                                              visualDensity: VisualDensity.compact,
-                                              side: BorderSide(color: Colors.blueGrey.shade200, width: 1),
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                                              visualDensity:
+                                                  VisualDensity.compact,
+                                              side: BorderSide(
+                                                  color:
+                                                      Colors.blueGrey.shade200,
+                                                  width: 1),
+                                              shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(3)),
                                             ),
                                           )
-                                        : Icon(Icons.chevron_right_rounded, color: Colors.blueGrey[200], size: 20),
+                                        : Icon(Icons.chevron_right_rounded,
+                                            color: Colors.blueGrey[200],
+                                            size: 20),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
+                          )
                         );
                       },
                     ),
@@ -1272,8 +1418,10 @@ class _ParcelScanningState extends State<ParcelScanning> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              _buildBottomNavItem(Icons.ballot_outlined, "Optimize", 0, themeBlue),
-              _buildBottomNavItem(Icons.explore_outlined, "View Route", 2, themeBlue),
+              _buildBottomNavItem(
+                  Icons.ballot_outlined, "Optimize", 0, themeBlue),
+              _buildBottomNavItem(
+                  Icons.explore_outlined, "View Route", 2, themeBlue),
             ],
           ),
         ),
@@ -1365,3 +1513,4 @@ class _DebounceTimer {
   Timer? _timer;
   void cancel() => _timer?.cancel();
 }
+

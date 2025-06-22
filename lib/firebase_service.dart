@@ -117,6 +117,7 @@ class FirebaseService {
           .collection("dispatcher")
           .doc(userEmail)
           .collection("parcels")
+          .orderBy("timestamp", descending: false) // <-- Order by scan time
           .get();
 
       print(
@@ -132,6 +133,7 @@ class FirebaseService {
             "address": data["address"],
             "latitude": data["latitude"],
             "longitude": data["longitude"],
+            "timestamp": data["timestamp"], // Keep timestamp for ordering
           });
           print(
               "✅ Retrieved Address: ${data['address']} | Lat: ${data['latitude']} | Lon: ${data['longitude']}");
