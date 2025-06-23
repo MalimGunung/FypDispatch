@@ -109,48 +109,53 @@ class FirebaseService {
   }
 
   // Fetch stored addresses from Firebase
-  Future<List<Map<String, dynamic>>> getStoredAddresses(
-      String userEmail) async {
-    List<Map<String, dynamic>> addressList = [];
-    try {
-      QuerySnapshot snapshot = await firestore
-          .collection("dispatcher")
-          .doc(userEmail)
-          .collection("parcels")
-          .orderBy("timestamp", descending: false) // <-- Order by scan time
-          .get();
+// Fetch stored addresses from Firebase
+Future<List<Map<String, dynamic>>> getStoredAddresses(
+    String userEmail) async {
+  List<Map<String, dynamic>> addressList = [];
+  try {
+    QuerySnapshot snapshot = await firestore
+        .collection("dispatcher")
+        .doc(userEmail)
+        .collection("parcels")
+        .orderBy("timestamp", descending: false) // <-- Order by scan time
+        .get();
 
-      print(
-          "📥 Total documents fetched from Firebase for user $userEmail: ${snapshot.docs.length}");
+    print(
+        "📥 Total documents fetched from Firebase for user $userEmail: ${snapshot.docs.length}");
 
-      for (var doc in snapshot.docs) {
-        var data = doc.data() as Map<String, dynamic>;
-        if (data.containsKey("latitude") &&
-            data.containsKey("longitude") &&
-            data.containsKey("address")) {
-          addressList.add({
-            "id": doc.id,
-            "address": data["address"],
-            "latitude": data["latitude"],
-            "longitude": data["longitude"],
-            "timestamp": data["timestamp"], // Keep timestamp for ordering
-          });
-          print(
-              "✅ Retrieved Address: ${data['address']} | Lat: ${data['latitude']} | Lon: ${data['longitude']}");
-        } else {
-          print("❌ Missing fields in document: ${doc.id}");
-        }
+    // Loop through the documents and assign a scan order
+    for (int i = 0; i < snapshot.docs.length; i++) {
+      var doc = snapshot.docs[i];
+      var data = doc.data() as Map<String, dynamic>;
+
+      if (data.containsKey("latitude") &&
+          data.containsKey("longitude") &&
+          data.containsKey("address")) {
+        addressList.add({
+          "id": doc.id,
+          "address": data["address"],
+          "latitude": data["latitude"],
+          "longitude": data["longitude"],
+          "timestamp": data["timestamp"], // Keep timestamp if needed
+          "scanOrder": i + 1, // <-- ✅ ADD SCAN ORDER HERE
+        });
+        print(
+            "✅ Retrieved Address (Scan #${i+1}): ${data['address']}");
+      } else {
+        print("❌ Missing fields in document: ${doc.id}");
       }
-
-      if (addressList.isEmpty) {
-        print("❌ No valid addresses found in Firestore for user $userEmail.");
-      }
-    } catch (e) {
-      print(
-          "❌ Error fetching addresses from Firestore for user $userEmail: $e");
     }
-    return addressList;
+
+    if (addressList.isEmpty) {
+      print("❌ No valid addresses found in Firestore for user $userEmail.");
+    }
+  } catch (e) {
+    print(
+        "❌ Error fetching addresses from Firestore for user $userEmail: $e");
   }
+  return addressList;
+}
 
   // Delete address from Firestore
   Future<void> deleteParcel(String userEmail, String documentId) async {
