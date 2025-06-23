@@ -116,18 +116,13 @@ class _ParcelScanningState extends State<ParcelScanning> {
     setState(() => isLoading = true);
     List<Map<String, dynamic>> storedAddresses =
         await firebaseService.getStoredAddresses(widget.userEmail);
-    // Sort by scanOrder if present, else fallback to id as timestamp
+    // Always sort by scanOrder ascending for display
     storedAddresses.sort((a, b) {
-      int orderA = a["scanOrder"] ?? 0;
-      int orderB = b["scanOrder"] ?? 0;
-      if (orderA != 0 && orderB != 0) {
-        return orderA.compareTo(orderB);
-      }
-      int idA = int.tryParse(a["id"].toString()) ?? 0;
-      int idB = int.tryParse(b["id"].toString()) ?? 0;
-      return idA.compareTo(idB);
+      int aOrder = a["scanOrder"] ?? 0;
+      int bOrder = b["scanOrder"] ?? 0;
+      return aOrder.compareTo(bOrder);
     });
-    addressList = List.from(storedAddresses); // keep scan order
+    addressList = List.from(storedAddresses);
     setState(() {
       addressList = addressList;
       isLoading = false;
@@ -392,14 +387,28 @@ class _ParcelScanningState extends State<ParcelScanning> {
       double latitude = coordinates["latitude"]!;
       double longitude = coordinates["longitude"]!;
 
+      // --- Assign scanOrder: max scanOrder in list + 1 ---
+      int nextScanOrder = 1;
+      if (addressList.isNotEmpty) {
+        final orders = addressList
+            .map((e) => e["scanOrder"] ?? 0)
+            .whereType<int>()
+            .toList();
+        if (orders.isNotEmpty) {
+          nextScanOrder = (orders.reduce((a, b) => a > b ? a : b)) + 1;
+        }
+      }
+
       print("✅ Address: $address");
       print("📍 Latitude: $latitude, Longitude: $longitude");
+      print("🔢 Scan Order: $nextScanOrder");
 
       await firebaseService.saveParcelData(
         widget.userEmail,
         address,
         latitude,
         longitude,
+        scanOrder: nextScanOrder, // <-- Pass scanOrder
       );
 
       // Optimistically add the new address at the bottom for instant UI feedback
@@ -409,8 +418,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
           "address": address,
           "latitude": latitude,
           "longitude": longitude,
+          "scanOrder": nextScanOrder,
         });
-        // _sortAddressList(); // <-- REMOVE this line to keep scan order
         isLoading = false;
       });
 
@@ -912,6 +921,13 @@ class _ParcelScanningState extends State<ParcelScanning> {
         ? addressList
         : addressList.where((item) => item["address"].toString().toLowerCase().contains(searchQuery.toLowerCase())).toList();
 
+    // Always sort filteredList by scanOrder for display
+    filteredList.sort((a, b) {
+      int aOrder = a["scanOrder"] ?? 0;
+      int bOrder = b["scanOrder"] ?? 0;
+      return aOrder.compareTo(bOrder);
+    });
+
     return Scaffold(
       extendBodyBehindAppBar: false,
       appBar: AppBar(
@@ -1199,14 +1215,39 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                         size: 26,
                                       ),
                                     ),
-                                    title: Text(
-                                      item["address"],
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 15,
-                                        color: Colors.blueGrey[700],
-                                        fontFamily: 'Montserrat',
-                                      ),
+                                    title: Row(
+                                      children: [
+                                        // Show scan order number if available
+                                        if (item["scanOrder"] != null)
+                                          Container(
+                                            margin: EdgeInsets.only(right: 8),
+                                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Colors.blueAccent.shade100.withOpacity(0.18),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Text(
+                                              "Scan #${item["scanOrder"]}",
+                                              style: TextStyle(
+                                                fontFamily: 'Montserrat',
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 12.5,
+                                                color: Colors.blueAccent.shade700,
+                                              ),
+                                            ),
+                                          ),
+                                        Expanded(
+                                          child: Text(
+                                            item["address"],
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.w500,
+                                              fontSize: 15,
+                                              color: Colors.blueGrey[700],
+                                              fontFamily: 'Montserrat',
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     subtitle: Padding(
                                       padding: const EdgeInsets.only(top: 5.0),

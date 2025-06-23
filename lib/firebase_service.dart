@@ -6,7 +6,7 @@ class FirebaseService {
 
   // Add delivery status to parcel data
   Future<void> saveParcelData(String userEmail, String address, double latitude,
-      double longitude) async {
+      double longitude, {int? scanOrder}) async {
     try {
       await firestore
           .collection("dispatcher")
@@ -18,9 +18,10 @@ class FirebaseService {
         "longitude": longitude,
         "timestamp": FieldValue.serverTimestamp(),
         "status": "pending",
+        if (scanOrder != null) "scanOrder": scanOrder, // <-- Store scanOrder
       });
       print(
-          "✅ Parcel saved for user $userEmail: $address | Lat: $latitude | Lon: $longitude");
+          "✅ Parcel saved for user $userEmail: $address | Lat: $latitude | Lon: $longitude | ScanOrder: $scanOrder");
     } catch (e) {
       print("❌ Error saving parcel to Firestore for user $userEmail: $e");
     }
@@ -118,15 +119,13 @@ Future<List<Map<String, dynamic>>> getStoredAddresses(
         .collection("dispatcher")
         .doc(userEmail)
         .collection("parcels")
-        .orderBy("timestamp", descending: false) // <-- Order by scan time
+        .orderBy("scanOrder", descending: false) // <-- Order by scanOrder
         .get();
 
     print(
         "📥 Total documents fetched from Firebase for user $userEmail: ${snapshot.docs.length}");
 
-    // Loop through the documents and assign a scan order
-    for (int i = 0; i < snapshot.docs.length; i++) {
-      var doc = snapshot.docs[i];
+    for (var doc in snapshot.docs) {
       var data = doc.data() as Map<String, dynamic>;
 
       if (data.containsKey("latitude") &&
@@ -137,11 +136,11 @@ Future<List<Map<String, dynamic>>> getStoredAddresses(
           "address": data["address"],
           "latitude": data["latitude"],
           "longitude": data["longitude"],
-          "timestamp": data["timestamp"], // Keep timestamp if needed
-          "scanOrder": i + 1, // <-- ✅ ADD SCAN ORDER HERE
+          "timestamp": data["timestamp"],
+          "scanOrder": data["scanOrder"], // <-- Use scanOrder from Firestore
         });
         print(
-            "✅ Retrieved Address (Scan #${i+1}): ${data['address']}");
+            "✅ Retrieved Address (Scan #${data['scanOrder'] ?? '?' }): ${data['address']}");
       } else {
         print("❌ Missing fields in document: ${doc.id}");
       }
@@ -282,3 +281,4 @@ Future<List<Map<String, dynamic>>> getStoredAddresses(
     }
   }
 }
+  
