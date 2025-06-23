@@ -1096,50 +1096,22 @@ class _ParcelScanningState extends State<ParcelScanning> {
                         final id = item["id"].toString();
                         final selected = selectedItems.contains(id);
                         double? distance = (orsDistances.length > index) ? orsDistances[index] : null;
-
-                        // Calculate scan sequence number based on original addressList index
-                        int scanSequence = addressList.indexWhere((addr) => addr["id"] == item["id"]) + 1;
-
                         return Dismissible(
                           key: Key(id),
                           background: Container(
                             alignment: Alignment.centerLeft,
-                            margin: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.red.shade400,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
+                            color: Colors.red.shade100,
                             child: Padding(
-                              padding: const EdgeInsets.only(left: 24.0),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 28),
-                                  SizedBox(height: 4),
-                                  Text("Delete", 
-                                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600))
-                                ],
-                              ),
+                              padding: const EdgeInsets.only(left: 20.0),
+                              child: Icon(Icons.delete, color: Colors.red.shade700),
                             ),
                           ),
                           secondaryBackground: Container(
                             alignment: Alignment.centerRight,
-                            margin: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.blueAccent.shade400,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
+                            color: Colors.blueAccent.shade100,
                             child: Padding(
-                              padding: const EdgeInsets.only(right: 24.0),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.edit_location_alt_rounded, color: Colors.white, size: 28),
-                                  SizedBox(height: 4),
-                                  Text("Edit", 
-                                      style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600))
-                                ],
-                              ),
+                              padding: const EdgeInsets.only(right: 20.0),
+                              child: Icon(Icons.edit, color: Colors.blueAccent.shade700),
                             ),
                           ),
                           confirmDismiss: (direction) async {
@@ -1148,23 +1120,11 @@ class _ParcelScanningState extends State<ParcelScanning> {
                               bool? confirm = await showDialog<bool>(
                                 context: context,
                                 builder: (context) => AlertDialog(
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  title: Text('Delete Parcel?', style: TextStyle(fontFamily: 'Montserrat', fontWeight: FontWeight.w600)),
-                                  content: Text('Are you sure you want to delete this parcel from your delivery list?', 
-                                      style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[600])),
+                                  title: Text('Delete Parcel?', style: TextStyle(fontFamily: 'Montserrat')),
+                                  content: Text('Are you sure you want to delete this parcel?', style: TextStyle(fontFamily: 'Montserrat')),
                                   actions: [
-                                    TextButton(
-                                      child: Text('CANCEL', style: TextStyle(color: Colors.blueGrey[500], fontWeight: FontWeight.w600)),
-                                      onPressed: () => Navigator.pop(context, false)
-                                    ),
-                                    ElevatedButton(
-                                      child: Text('DELETE', style: TextStyle(fontWeight: FontWeight.w600)),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: Colors.red.shade500,
-                                        foregroundColor: Colors.white,
-                                      ),
-                                      onPressed: () => Navigator.pop(context, true)
-                                    ),
+                                    TextButton(child: Text('Cancel'), onPressed: () => Navigator.pop(context, false)),
+                                    TextButton(child: Text('Delete', style: TextStyle(color: Colors.red)), onPressed: () => Navigator.pop(context, true)),
                                   ],
                                 ),
                               );
@@ -1180,44 +1140,36 @@ class _ParcelScanningState extends State<ParcelScanning> {
                             }
                           },
                           child: AnimatedContainer(
-                            duration: Duration(milliseconds: 300),
+                            duration: Duration(milliseconds: 200),
                             curve: Curves.easeInOut,
-                            margin: EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                gradient: selected 
-                                    ? LinearGradient(
-                                        colors: [themeBlue.withOpacity(0.08), themeBlue.withOpacity(0.12)],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      )
-                                    : LinearGradient(
-                                        colors: [Colors.white, Colors.grey.shade50],
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                      ),
-                                border: Border.all(
-                                  color: selected ? themeBlue.withOpacity(0.3) : Colors.grey.shade200,
-                                  width: selected ? 1.5 : 1,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: selected 
-                                        ? themeBlue.withOpacity(0.15) 
-                                        : Colors.grey.withOpacity(0.08),
-                                    blurRadius: selected ? 8 : 4,
-                                    offset: Offset(0, selected ? 4 : 2),
-                                  ),
-                                ],
+                            child: Card(
+                              elevation: selected ? 4 : 1.5,
+                              margin: EdgeInsets.symmetric(vertical: 6),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: selected
+                                    ? BorderSide(color: themeBlue.withOpacity(0.7), width: 1.5)
+                                    : BorderSide(color: Colors.grey.shade200, width: 0.8),
                               ),
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(16),
-                                  onLongPress: () {
+                              color: selected ? themeBlue.withOpacity(0.04) : Colors.white,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(12),
+                                onLongPress: () {
+                                  setState(() {
+                                    selectionMode = true;
+                                    if (selected) {
+                                      selectedItems.remove(id);
+                                      if (selectedItems.isEmpty) selectionMode = false;
+                                    } else {
+                                      selectedItems.add(id);
+                                    }
+                                  });
+                                  // Haptic feedback
+                                  Feedback.forLongPress(context);
+                                },
+                                onTap: () {
+                                  if (selectionMode) {
                                     setState(() {
-                                      selectionMode = true;
                                       if (selected) {
                                         selectedItems.remove(id);
                                         if (selectedItems.isEmpty) selectionMode = false;
@@ -1225,287 +1177,78 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                         selectedItems.add(id);
                                       }
                                     });
-                                    Feedback.forLongPress(context);
-                                  },
-                                  onTap: () {
-                                    if (selectionMode) {
-                                      setState(() {
-                                        if (selected) {
-                                          selectedItems.remove(id);
-                                          if (selectedItems.isEmpty) selectionMode = false;
-                                        } else {
-                                          selectedItems.add(id);
-                                        }
-                                      });
-                                      Feedback.forTap(context);
-                                    } else {
-                                      editAddress(item["id"], item["address"]);
-                                    }
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        // Enhanced scan number badge with shadow, border, and glow
-                                        Container(
-                                          width: 44,
-                                          height: 44,
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            gradient: LinearGradient(
-                                              colors: [
-                                                themeBlue,
-                                                Colors.blueAccent.shade100.withOpacity(0.85),
-                                              ],
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                            ),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: themeBlue.withOpacity(0.22),
-                                                blurRadius: 12,
-                                                spreadRadius: 1,
-                                                offset: Offset(0, 6),
-                                              ),
-                                              BoxShadow(
-                                                color: Colors.white.withOpacity(0.18),
-                                                blurRadius: 2,
-                                                spreadRadius: 1,
-                                                offset: Offset(-2, -2),
-                                              ),
-                                            ],
-                                            border: Border.all(
-                                              color: selected ? Colors.white : Colors.blueGrey.shade100,
-                                              width: 2.2,
-                                            ),
-                                          ),
-                                          child: Stack(
-                                            children: [
-                                              Center(
-                                                child: Column(
-                                                  mainAxisAlignment: MainAxisAlignment.center,
-                                                  children: [
-                                                    Text(
-                                                      "$scanSequence",
-                                                      style: TextStyle(
-                                                        fontSize: 17,
-                                                        fontWeight: FontWeight.bold,
-                                                        color: Colors.white,
-                                                        fontFamily: 'Montserrat',
-                                                        letterSpacing: 0.5,
-                                                        shadows: [
-                                                          Shadow(
-                                                            color: Colors.black26,
-                                                            blurRadius: 3,
-                                                            offset: Offset(1, 1),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    Container(
-                                                      margin: EdgeInsets.only(top: 1),
-                                                      padding: EdgeInsets.symmetric(horizontal: 3, vertical: 0),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.white.withOpacity(0.13),
-                                                        borderRadius: BorderRadius.circular(6),
-                                                      ),
-                                                      child: Text(
-                                                        "SCAN",
-                                                        style: TextStyle(
-                                                          fontSize: 8,
-                                                          fontWeight: FontWeight.w700,
-                                                          color: Colors.white.withOpacity(0.85),
-                                                          fontFamily: 'Montserrat',
-                                                          letterSpacing: 1.2,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                              if (selected)
-                                                Positioned(
-                                                  top: 2,
-                                                  right: 2,
-                                                  child: Container(
-                                                    width: 13,
-                                                    height: 13,
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.white,
-                                                      shape: BoxShape.circle,
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: themeBlue.withOpacity(0.18),
-                                                          blurRadius: 4,
-                                                          offset: Offset(0, 2),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    child: Icon(
-                                                      Icons.check,
-                                                      size: 10,
-                                                      color: themeBlue,
-                                                    ),
-                                                  ),
-                                                ),
-                                            ],
-                                          ),
-                                        ),
-                                        SizedBox(width: 18),
-                                        // Content area
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              // Address text with improved typography and subtle shadow
-                                              Text(
-                                                item["address"],
-                                                style: TextStyle(
-                                                  fontWeight: FontWeight.w700,
-                                                  fontSize: 16,
-                                                  color: selected ? themeBlue : Colors.blueGrey[800],
-                                                  fontFamily: 'Montserrat',
-                                                  height: 1.3,
-                                                  shadows: [
-                                                    Shadow(
-                                                      color: Colors.blueGrey.shade50,
-                                                      blurRadius: 2,
-                                                      offset: Offset(0, 1),
-                                                    ),
-                                                  ],
-                                                ),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                              SizedBox(height: 10),
-                                              // Distance and status row
-                                              Row(
-                                                children: [
-                                                  // Distance badge with icon and gradient
-                                                  Container(
-                                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                    decoration: BoxDecoration(
-                                                      gradient: distance != null 
-                                                          ? LinearGradient(
-                                                              colors: [Colors.deepPurple.shade50, Colors.deepPurple.shade100],
-                                                              begin: Alignment.topLeft,
-                                                              end: Alignment.bottomRight,
-                                                            )
-                                                          : LinearGradient(
-                                                              colors: [Colors.blueGrey.shade50, Colors.blueGrey.shade100],
-                                                              begin: Alignment.topLeft,
-                                                              end: Alignment.bottomRight,
-                                                            ),
-                                                      borderRadius: BorderRadius.circular(12),
-                                                      border: Border.all(
-                                                        color: distance != null 
-                                                            ? Colors.deepPurple.shade200
-                                                            : Colors.blueGrey.shade200,
-                                                        width: 1,
-                                                      ),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: Colors.deepPurple.withOpacity(0.07),
-                                                          blurRadius: 4,
-                                                          offset: Offset(0, 2),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    child: Row(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: [
-                                                        Icon(
-                                                          distance != null ? Icons.navigation_rounded : Icons.hourglass_empty_rounded,
-                                                          size: 14,
-                                                          color: distance != null 
-                                                              ? Colors.deepPurple.shade400 
-                                                              : Colors.blueGrey[400],
-                                                        ),
-                                                        SizedBox(width: 6),
-                                                        Text(
-                                                          distance != null 
-                                                              ? "${distance.toStringAsFixed(1)} km"
-                                                              : "Calculating...",
-                                                          style: TextStyle(
-                                                            color: distance != null 
-                                                                ? Colors.deepPurple.shade600 
-                                                                : Colors.blueGrey[500],
-                                                            fontSize: 13,
-                                                            fontFamily: 'Montserrat',
-                                                            fontWeight: FontWeight.w700,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  SizedBox(width: 8),
-                                                  // Status badge with subtle icon
-                                                  Container(
-                                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                    decoration: BoxDecoration(
-                                                      gradient: LinearGradient(
-                                                        colors: [Colors.green.shade50, Colors.green.shade100],
-                                                        begin: Alignment.topLeft,
-                                                        end: Alignment.bottomRight,
-                                                      ),
-                                                      borderRadius: BorderRadius.circular(12),
-                                                      border: Border.all(color: Colors.green.shade200, width: 1),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: Colors.green.withOpacity(0.07),
-                                                          blurRadius: 4,
-                                                          offset: Offset(0, 2),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    child: Row(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: [
-                                                        Icon(
-                                                          Icons.circle,
-                                                          size: 7,
-                                                          color: Colors.green.shade400,
-                                                        ),
-                                                        SizedBox(width: 6),
-                                                        Text(
-                                                          "PENDING",
-                                                          style: TextStyle(
-                                                            color: Colors.green.shade600,
-                                                            fontSize: 11,
-                                                            fontFamily: 'Montserrat',
-                                                            fontWeight: FontWeight.w700,
-                                                            letterSpacing: 0.5,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        // Action indicator
-                                        Container(
-                                          width: 32,
-                                          height: 32,
-                                          decoration: BoxDecoration(
-                                            color: selected 
-                                                ? themeBlue.withOpacity(0.1) 
-                                                : Colors.grey.shade100,
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Icon(
-                                            selectionMode 
-                                                ? (selected ? Icons.check_box : Icons.check_box_outline_blank)
-                                                : Icons.chevron_right_rounded,
-                                            color: selected ? themeBlue : Colors.blueGrey[400],
-                                            size: 20,
-                                          ),
-                                        ),
-                                      ],
+                                    Feedback.forTap(context);
+                                  } else {
+                                    editAddress(item["id"], item["address"]);
+                                  }
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 5.0),
+                                  child: ListTile(
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    leading: Container(
+                                      width: 48,
+                                      height: 48,
+                                      decoration: BoxDecoration(
+                                        color: selected ? themeBlue.withOpacity(0.1) : Colors.grey.shade100,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        selected ? Icons.check_circle_outline : Icons.local_shipping_outlined,
+                                        color: selected ? themeBlue : Colors.blueGrey[400],
+                                        size: 26,
+                                      ),
                                     ),
+                                    title: Text(
+                                      item["address"],
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 15,
+                                        color: Colors.blueGrey[700],
+                                        fontFamily: 'Montserrat',
+                                      ),
+                                    ),
+                                    subtitle: Padding(
+                                      padding: const EdgeInsets.only(top: 5.0),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: distance != null ? Colors.deepPurple.shade50 : Colors.blueGrey.shade50,
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.near_me_outlined, size: 15, color: distance != null ? Colors.deepPurple.shade300 : Colors.blueGrey[300]),
+                                                SizedBox(width: 5),
+                                                Text(
+                                                  distance != null ? "${distance.toStringAsFixed(1)} km away" : "Calculating...",
+                                                  style: TextStyle(
+                                                    color: distance != null ? Colors.deepPurple.shade300 : Colors.blueGrey[300],
+                                                    fontSize: 14.5,
+                                                    fontFamily: 'Montserrat',
+                                                    fontWeight: FontWeight.w900,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    trailing: selectionMode
+                                        ? AbsorbPointer(
+                                            child: Checkbox(
+                                              value: selected,
+                                              activeColor: themeBlue,
+                                              onChanged: (bool? value) {},
+                                              visualDensity: VisualDensity.compact,
+                                              side: BorderSide(color: Colors.blueGrey.shade200, width: 1),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+                                            ),
+                                          )
+                                        : Icon(Icons.chevron_right_rounded, color: Colors.blueGrey[200], size: 20),
                                   ),
                                 ),
                               ),
@@ -1516,11 +1259,27 @@ class _ParcelScanningState extends State<ParcelScanning> {
                       ),
                     ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: scanParcel,
-        backgroundColor: themeBlue,
-        child: Icon(Icons.add, color: Colors.white),
-        tooltip: 'Scan Parcel',
+      floatingActionButton: Container(
+        width: 62,
+        height: 62,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: themeBlue.withOpacity(0.18),
+              blurRadius: 12,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        child: FloatingActionButton(
+          onPressed: scanParcel,
+          backgroundColor: themeBlue,
+          shape: CircleBorder(),
+          elevation: 6,
+          child: Icon(Icons.add, color: Colors.white, size: 32),
+          tooltip: 'Scan Parcel',
+        ),
       ),
       bottomNavigationBar: BottomAppBar(
         elevation: 10,
