@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class ScannedAddressesWidget extends StatefulWidget {
+  const ScannedAddressesWidget({super.key});
+
   @override
   _ScannedAddressesWidgetState createState() => _ScannedAddressesWidgetState();
 }

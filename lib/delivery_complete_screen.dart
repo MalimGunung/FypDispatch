@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 class DeliveryCompleteScreen extends StatelessWidget {
+  const DeliveryCompleteScreen({super.key});
+
   @override
   Widget build(BuildContext context) {
     final themeGreen = Colors.green.shade700;

@@ -3,6 +3,8 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
 class CameraScreen extends StatefulWidget {
+  const CameraScreen({super.key});
+
   @override
   _CameraScreenState createState() => _CameraScreenState();
 }

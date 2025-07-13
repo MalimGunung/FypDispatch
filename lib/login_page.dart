@@ -258,6 +258,16 @@ class _LoginPageState extends State<LoginPage> {
                       child: ElevatedButton(
                         onPressed:
                             _loading ? null : () => signInWithEmail(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: themeColor,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                              vertical: 16), // Increased padding
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          elevation: 2, // Subtle elevation
+                          shadowColor: themeColor.withOpacity(0.3),
+                        ),
                         child: _loading
                             ? SizedBox(
                                 width: 20, // Slightly larger progress indicator
@@ -270,16 +280,6 @@ class _LoginPageState extends State<LoginPage> {
                                     fontFamily: 'Inter',
                                     fontWeight: FontWeight.w600,
                                     fontSize: 16)),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: themeColor,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                              vertical: 16), // Increased padding
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                          elevation: 2, // Subtle elevation
-                          shadowColor: themeColor.withOpacity(0.3),
-                        ),
                       ),
                     ),
                     SizedBox(height: 20),

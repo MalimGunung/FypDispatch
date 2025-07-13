@@ -12,7 +12,7 @@ import 'dart:async'; // <-- Add this import for Timer
 
 class ParcelScanning extends StatefulWidget {
   final String userEmail;
-  ParcelScanning({Key? key, required this.userEmail}) : super(key: key);
+  const ParcelScanning({super.key, required this.userEmail});
 
   @override
   _ParcelScanningState createState() => _ParcelScanningState();
@@ -135,8 +135,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
 
   // ✅ Capture and scan an address from an image
   Future<void> scanParcel() async {
-    final ImagePicker _picker = ImagePicker();
-    final pickedFile = await _picker.pickImage(source: ImageSource.camera);
+    final ImagePicker picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.camera);
 
     if (pickedFile != null) {
       setState(() => isLoading = true); // Show loader
@@ -224,13 +224,6 @@ class _ParcelScanningState extends State<ParcelScanning> {
                 onPressed: () => Navigator.of(context).pop(null),
               ),
               ElevatedButton(
-                child: Text(
-                  "CONFIRM",
-                  style: TextStyle(
-                    fontFamily: 'Montserrat',
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.blueAccent.shade700,
                   foregroundColor: Colors.white,
@@ -240,6 +233,13 @@ class _ParcelScanningState extends State<ParcelScanning> {
                     Navigator.of(context).pop(controller.text.trim());
                   }
                 },
+                child: Text(
+                  "CONFIRM",
+                  style: TextStyle(
+                    fontFamily: 'Montserrat',
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ],
           );
@@ -523,8 +523,9 @@ class _ParcelScanningState extends State<ParcelScanning> {
                       .toSet()
                       .toList()
                       .join(', ');
-                  if (addr.isNotEmpty && !newSuggestions.contains(addr))
+                  if (addr.isNotEmpty && !newSuggestions.contains(addr)) {
                     newSuggestions.add(addr); // Ensure unique suggestions
+                  }
                 }
               }
             }
@@ -640,7 +641,9 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                   )
                                 : addressController.text.isNotEmpty
                                     ? IconButton(
-                                        icon: Icon(Icons.clear, color: const Color.fromARGB(255, 242, 47, 47)),
+                                        icon: Icon(Icons.clear,
+                                            color: const Color.fromARGB(
+                                                255, 242, 47, 47)),
                                         tooltip: 'Clear',
                                         onPressed: () {
                                           setStateDialog(() {
@@ -733,12 +736,6 @@ class _ParcelScanningState extends State<ParcelScanning> {
                           children: [
                             Expanded(
                               child: TextButton(
-                                child: Text("CANCEL",
-                                    style: TextStyle(
-                                        color: Colors.blueGrey[600],
-                                        fontWeight: FontWeight.w600,
-                                        fontFamily: 'Montserrat',
-                                        fontSize: 13.5)),
                                 onPressed: () => Navigator.pop(context),
                                 style: TextButton.styleFrom(
                                   padding: EdgeInsets.symmetric(vertical: 12),
@@ -748,6 +745,12 @@ class _ParcelScanningState extends State<ParcelScanning> {
                                           color: Colors.blueGrey.shade200)),
                                   backgroundColor: Colors.white,
                                 ),
+                                child: Text("CANCEL",
+                                    style: TextStyle(
+                                        color: Colors.blueGrey[600],
+                                        fontWeight: FontWeight.w600,
+                                        fontFamily: 'Montserrat',
+                                        fontSize: 13.5)),
                               ),
                             ),
                             SizedBox(width: 12), // Increased spacing
@@ -907,10 +910,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
     final themeBlue = Colors.blueAccent.shade700;
     final bodyGradient = BoxDecoration(
       gradient: LinearGradient(
-        colors: [
-          Color(0xFFF3F5F9),
-          Color(0xFFE8EFF5)
-        ],
+        colors: [Color(0xFFF3F5F9), Color(0xFFE8EFF5)],
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
       ),
@@ -919,7 +919,12 @@ class _ParcelScanningState extends State<ParcelScanning> {
     // Filtered list for search
     final filteredList = searchQuery.isEmpty
         ? addressList
-        : addressList.where((item) => item["address"].toString().toLowerCase().contains(searchQuery.toLowerCase())).toList();
+        : addressList
+            .where((item) => item["address"]
+                .toString()
+                .toLowerCase()
+                .contains(searchQuery.toLowerCase()))
+            .toList();
 
     // Always sort filteredList by scanOrder for display
     filteredList.sort((a, b) {
@@ -944,7 +949,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
                 },
               )
             : IconButton(
-                icon: Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 22),
+                icon: Icon(Icons.arrow_back_ios_new_rounded,
+                    color: Colors.white, size: 22),
                 onPressed: () => Navigator.pop(context),
               ),
         title: selectionMode
@@ -962,13 +968,19 @@ class _ParcelScanningState extends State<ParcelScanning> {
                   Spacer(),
                   IconButton(
                     icon: Icon(Icons.select_all_rounded, color: Colors.white),
-                    tooltip: selectedItems.length == addressList.length && addressList.isNotEmpty ? 'Deselect All' : 'Select All',
+                    tooltip: selectedItems.length == addressList.length &&
+                            addressList.isNotEmpty
+                        ? 'Deselect All'
+                        : 'Select All',
                     onPressed: () {
                       setState(() {
-                        if (selectedItems.length == addressList.length && addressList.isNotEmpty) {
+                        if (selectedItems.length == addressList.length &&
+                            addressList.isNotEmpty) {
                           selectedItems.clear();
                         } else {
-                          selectedItems = addressList.map((item) => item["id"].toString()).toSet();
+                          selectedItems = addressList
+                              .map((item) => item["id"].toString())
+                              .toSet();
                         }
                       });
                     },
@@ -976,56 +988,89 @@ class _ParcelScanningState extends State<ParcelScanning> {
                   IconButton(
                     icon: Icon(Icons.done_all_sharp, color: Colors.white),
                     tooltip: 'Mark as Complete',
-                    onPressed: selectedItems.isNotEmpty ? () { markDeliveriesComplete(); } : null,
+                    onPressed: selectedItems.isNotEmpty
+                        ? () {
+                            markDeliveriesComplete();
+                          }
+                        : null,
                   ),
                   IconButton(
-                    icon: Icon(Icons.delete_forever_outlined, color: Colors.white),
+                    icon: Icon(Icons.delete_forever_outlined,
+                        color: Colors.white),
                     tooltip: 'Delete',
-                    onPressed: selectedItems.isNotEmpty ? () async {
-                      bool? confirmDelete = await showDialog<bool>(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            title: Text("Confirm Deletion", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[800])),
-                            content: Text("Delete {selectedItems.length} selected parcel(s)? This cannot be undone.", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[600])),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                            actions: <Widget>[
-                              TextButton(
-                                child: Text("CANCEL", style: TextStyle(fontFamily: 'Montserrat', color: Colors.blueGrey[500], fontWeight: FontWeight.w600)),
-                                onPressed: () => Navigator.of(context).pop(false),
-                              ),
-                              TextButton(
-                                child: Text("DELETE", style: TextStyle(fontFamily: 'Montserrat', color: Colors.red.shade600, fontWeight: FontWeight.w600)),
-                                onPressed: () => Navigator.of(context).pop(true),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                      if (confirmDelete == true) {
-                        for (var id in selectedItems) {
-                          await firebaseService.deleteParcel(widget.userEmail, id);
-                        }
-                        OptimizedDeliveryScreen.invalidateCache();
-                        setState(() {
-                          selectedItems.clear();
-                          selectionMode = false;
-                        });
-                        fetchStoredAddresses();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("✅ ${selectedItems.length} parcel(s) deleted.")),
-                        );
-                      }
-                    } : null,
+                    onPressed: selectedItems.isNotEmpty
+                        ? () async {
+                            bool? confirmDelete = await showDialog<bool>(
+                              context: context,
+                              builder: (BuildContext context) {
+                                return AlertDialog(
+                                  title: Text("Confirm Deletion",
+                                      style: TextStyle(
+                                          fontFamily: 'Montserrat',
+                                          color: Colors.blueGrey[800])),
+                                  content: Text(
+                                      "Delete {selectedItems.length} selected parcel(s)? This cannot be undone.",
+                                      style: TextStyle(
+                                          fontFamily: 'Montserrat',
+                                          color: Colors.blueGrey[600])),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15)),
+                                  actions: <Widget>[
+                                    TextButton(
+                                      child: Text("CANCEL",
+                                          style: TextStyle(
+                                              fontFamily: 'Montserrat',
+                                              color: Colors.blueGrey[500],
+                                              fontWeight: FontWeight.w600)),
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(false),
+                                    ),
+                                    TextButton(
+                                      child: Text("DELETE",
+                                          style: TextStyle(
+                                              fontFamily: 'Montserrat',
+                                              color: Colors.red.shade600,
+                                              fontWeight: FontWeight.w600)),
+                                      onPressed: () =>
+                                          Navigator.of(context).pop(true),
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                            if (confirmDelete == true) {
+                              for (var id in selectedItems) {
+                                await firebaseService.deleteParcel(
+                                    widget.userEmail, id);
+                              }
+                              OptimizedDeliveryScreen.invalidateCache();
+                              setState(() {
+                                selectedItems.clear();
+                                selectionMode = false;
+                              });
+                              fetchStoredAddresses();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content: Text(
+                                        "✅ ${selectedItems.length} parcel(s) deleted.")),
+                              );
+                            }
+                          }
+                        : null,
                   ),
                 ],
               )
             : TextField(
                 onChanged: (val) => setState(() => searchQuery = val),
-                style: TextStyle(color: Colors.white, fontFamily: 'Montserrat', fontSize: 18, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                    color: Colors.white,
+                    fontFamily: 'Montserrat',
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600),
                 decoration: InputDecoration(
                   hintText: 'Search parcels...',
-                  hintStyle: TextStyle(color: Colors.white70, fontFamily: 'Montserrat'),
+                  hintStyle: TextStyle(
+                      color: Colors.white70, fontFamily: 'Montserrat'),
                   border: InputBorder.none,
                   prefixIcon: Icon(Icons.search, color: Colors.white70),
                   suffixIcon: searchQuery.isNotEmpty
@@ -1074,7 +1119,8 @@ class _ParcelScanningState extends State<ParcelScanning> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           // Placeholder for engaging illustration
-                          Icon(Icons.local_shipping, size: 80, color: Colors.blueAccent.shade100),
+                          Icon(Icons.local_shipping,
+                              size: 80, color: Colors.blueAccent.shade100),
                           SizedBox(height: 22),
                           Text(
                             "No Parcels Found",
@@ -1111,23 +1157,44 @@ class _ParcelScanningState extends State<ParcelScanning> {
                         final item = filteredList[index];
                         final id = item["id"].toString();
                         final selected = selectedItems.contains(id);
-                        double? distance = (orsDistances.length > index) ? orsDistances[index] : null;
+                        double? distance = (orsDistances.length > index &&
+                                index < orsDistances.length)
+                            ? orsDistances[index]
+                            : null;
+
+                        // Find the original index in addressList to get the correct distance
+                        int originalIndex =
+                            addressList.indexWhere((addr) => addr["id"] == id);
+                        if (originalIndex != -1 &&
+                            originalIndex < orsDistances.length) {
+                          distance = orsDistances[originalIndex];
+                        }
+
+                        // --- Improved Card Design ---
                         return Dismissible(
                           key: Key(id),
                           background: Container(
                             alignment: Alignment.centerLeft,
-                            color: Colors.red.shade100,
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                             child: Padding(
-                              padding: const EdgeInsets.only(left: 20.0),
-                              child: Icon(Icons.delete, color: Colors.red.shade700),
+                              padding: const EdgeInsets.only(left: 25.0),
+                              child: Icon(Icons.delete_outline_rounded,
+                                  color: Colors.red.shade600, size: 30),
                             ),
                           ),
                           secondaryBackground: Container(
                             alignment: Alignment.centerRight,
-                            color: Colors.blueAccent.shade100,
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(16),
+                            ),
                             child: Padding(
-                              padding: const EdgeInsets.only(right: 20.0),
-                              child: Icon(Icons.edit, color: Colors.blueAccent.shade700),
+                              padding: const EdgeInsets.only(right: 25.0),
+                              child: Icon(Icons.edit_outlined,
+                                  color: Colors.blue.shade600, size: 30),
                             ),
                           ),
                           confirmDismiss: (direction) async {
@@ -1136,11 +1203,34 @@ class _ParcelScanningState extends State<ParcelScanning> {
                               bool? confirm = await showDialog<bool>(
                                 context: context,
                                 builder: (context) => AlertDialog(
-                                  title: Text('Delete Parcel?', style: TextStyle(fontFamily: 'Montserrat')),
-                                  content: Text('Are you sure you want to delete this parcel?', style: TextStyle(fontFamily: 'Montserrat')),
+                                  title: Text('Delete Parcel?',
+                                      style: TextStyle(
+                                          fontFamily: 'Montserrat',
+                                          color: Colors.blueGrey[800])),
+                                  content: Text(
+                                      'Are you sure you want to delete this parcel? This action cannot be undone.',
+                                      style: TextStyle(
+                                          fontFamily: 'Montserrat',
+                                          color: Colors.blueGrey[600])),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(15)),
                                   actions: [
-                                    TextButton(child: Text('Cancel'), onPressed: () => Navigator.pop(context, false)),
-                                    TextButton(child: Text('Delete', style: TextStyle(color: Colors.red)), onPressed: () => Navigator.pop(context, true)),
+                                    TextButton(
+                                        child: Text('CANCEL',
+                                            style: TextStyle(
+                                                fontFamily: 'Montserrat',
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.blueGrey[500])),
+                                        onPressed: () =>
+                                            Navigator.pop(context, false)),
+                                    TextButton(
+                                        child: Text('DELETE',
+                                            style: TextStyle(
+                                                fontFamily: 'Montserrat',
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.red.shade600)),
+                                        onPressed: () =>
+                                            Navigator.pop(context, true)),
                                   ],
                                 ),
                               );
@@ -1152,153 +1242,421 @@ class _ParcelScanningState extends State<ParcelScanning> {
                             } else {
                               // Edit
                               editAddress(item["id"], item["address"]);
-                              return false;
+                              return false; // Do not dismiss, edit dialog will handle UI
                             }
                           },
-                          child: AnimatedContainer(
-                            duration: Duration(milliseconds: 200),
-                            curve: Curves.easeInOut,
-                            child: Card(
-                              elevation: selected ? 4 : 1.5,
-                              margin: EdgeInsets.symmetric(vertical: 6),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: selected
-                                    ? BorderSide(color: themeBlue.withOpacity(0.7), width: 1.5)
-                                    : BorderSide(color: Colors.grey.shade200, width: 0.8),
-                              ),
-                              color: selected ? themeBlue.withOpacity(0.04) : Colors.white,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(12),
-                                onLongPress: () {
-                                  setState(() {
-                                    selectionMode = true;
-                                    if (selected) {
-                                      selectedItems.remove(id);
-                                      if (selectedItems.isEmpty) selectionMode = false;
-                                    } else {
-                                      selectedItems.add(id);
-                                    }
-                                  });
-                                  // Haptic feedback
-                                  Feedback.forLongPress(context);
-                                },
-                                onTap: () {
-                                  if (selectionMode) {
-                                    setState(() {
-                                      if (selected) {
-                                        selectedItems.remove(id);
-                                        if (selectedItems.isEmpty) selectionMode = false;
-                                      } else {
-                                        selectedItems.add(id);
-                                      }
-                                    });
-                                    Feedback.forTap(context);
-                                  } else {
-                                    editAddress(item["id"], item["address"]);
-                                  }
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 5.0),
-                                  child: ListTile(
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    leading: Container(
-                                      width: 48,
-                                      height: 48,
-                                      decoration: BoxDecoration(
-                                        color: selected ? themeBlue.withOpacity(0.1) : Colors.grey.shade100,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        selected ? Icons.check_circle_outline : Icons.local_shipping_outlined,
-                                        color: selected ? themeBlue : Colors.blueGrey[400],
-                                        size: 26,
+                          child: Container(
+                            margin: EdgeInsets.symmetric(vertical: 7, horizontal: 2),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: selected
+                                      ? themeBlue.withOpacity(0.18)
+                                      : Colors.grey.withOpacity(0.08),
+                                  blurRadius: selected ? 18 : 10,
+                                  offset: Offset(0, selected ? 6 : 3),
+                                ),
+                              ],
+                            ),
+                            child: Stack(
+                              children: [
+                                // Gradient accent bar
+                                Positioned(
+                                  left: 0,
+                                  top: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    width: 7,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.only(
+                                          topLeft: Radius.circular(18),
+                                          bottomLeft: Radius.circular(18)),
+                                      gradient: LinearGradient(
+                                        colors: selected
+                                            ? [themeBlue, Colors.deepPurple.shade400]
+                                            : [Colors.blueAccent.shade100, Colors.blue.shade50],
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
                                       ),
                                     ),
-                                    title: Row(
-                                      children: [
-                                        // Show scan order number if available
-                                        if (item["scanOrder"] != null)
-                                          Container(
-                                            margin: EdgeInsets.only(right: 8),
-                                            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: Colors.blueAccent.shade100.withOpacity(0.18),
-                                              borderRadius: BorderRadius.circular(8),
-                                            ),
-                                            child: Text(
-                                              "Scan #${item["scanOrder"]}",
-                                              style: TextStyle(
-                                                fontFamily: 'Montserrat',
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 12.5,
-                                                color: Colors.blueAccent.shade700,
-                                              ),
-                                            ),
-                                          ),
-                                        Expanded(
-                                          child: Text(
-                                            item["address"],
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 15,
-                                              color: Colors.blueGrey[700],
-                                              fontFamily: 'Montserrat',
-                                            ),
-                                          ),
-                                        ),
-                                      ],
+                                  ),
+                                ),
+                                Card(
+                                    elevation: 0,
+                                    margin: EdgeInsets.zero,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(18),
+                                      side: selected
+                                          ? BorderSide(
+                                              color: themeBlue.withOpacity(0.7),
+                                              width: 2)
+                                          : BorderSide(
+                                              color: Colors.grey.shade200,
+                                              width: 1),
                                     ),
-                                    subtitle: Padding(
-                                      padding: const EdgeInsets.only(top: 5.0),
-                                      child: Row(
-                                        children: [
-                                          Container(
-                                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: distance != null ? Colors.deepPurple.shade50 : Colors.blueGrey.shade50,
-                                              borderRadius: BorderRadius.circular(20),
-                                            ),
+                                    clipBehavior: Clip.antiAlias,
+                                    child: InkWell(
+                                        borderRadius: BorderRadius.circular(18),
+                                        onLongPress: () {
+                                          setState(() {
+                                            selectionMode = true;
+                                            if (selected) {
+                                              selectedItems.remove(id);
+                                              if (selectedItems.isEmpty)
+                                                selectionMode = false;
+                                            } else {
+                                              selectedItems.add(id);
+                                            }
+                                          });
+                                          Feedback.forLongPress(context);
+                                        },
+                                        onTap: () {
+                                          if (selectionMode) {
+                                            setState(() {
+                                              if (selected) {
+                                                selectedItems.remove(id);
+                                                if (selectedItems.isEmpty)
+                                                  selectionMode = false;
+                                              } else {
+                                                selectedItems.add(id);
+                                              }
+                                            });
+                                            Feedback.forTap(context);
+                                          } else {
+                                            editAddress(
+                                                item["id"], item["address"]);
+                                          }
+                                        },
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            color: selected
+                                                ? themeBlue.withOpacity(0.08)
+                                                : Colors.white,
+                                            borderRadius:
+                                                BorderRadius.circular(18),
+                                          ),
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 18.0,
+                                                vertical: 16.0),
                                             child: Row(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.center,
                                               children: [
-                                                Icon(Icons.near_me_outlined, size: 15, color: distance != null ? Colors.deepPurple.shade300 : Colors.blueGrey[300]),
-                                                SizedBox(width: 5),
-                                                Text(
-                                                  distance != null ? "${distance.toStringAsFixed(1)} km away" : "Calculating...",
-                                                  style: TextStyle(
-                                                    color: distance != null ? Colors.deepPurple.shade300 : Colors.blueGrey[300],
-                                                    fontSize: 14.5,
-                                                    fontFamily: 'Montserrat',
-                                                    fontWeight: FontWeight.w900,
+                                                // Icon with subtle gradient background
+                                                Container(
+                                                  width: 48,
+                                                  height: 48,
+                                                  decoration: BoxDecoration(
+                                                    gradient: selected
+                                                        ? LinearGradient(
+                                                            colors: [
+                                                              themeBlue
+                                                                  .withOpacity(
+                                                                      0.23),
+                                                              Colors.deepPurple
+                                                                  .withOpacity(
+                                                                      0.13)
+                                                            ],
+                                                            begin: Alignment
+                                                                .topLeft,
+                                                            end: Alignment
+                                                                .bottomRight,
+                                                          )
+                                                        : LinearGradient(
+                                                            colors: [
+                                                              Colors
+                                                                  .blue.shade50,
+                                                              Colors.blueGrey
+                                                                  .shade50
+                                                            ],
+                                                            begin: Alignment
+                                                                .topLeft,
+                                                            end: Alignment
+                                                                .bottomRight,
+                                                          ),
+                                                    shape: BoxShape.circle,
+                                                    border: Border.all(
+                                                      color: selected
+                                                          ? themeBlue
+                                                              .withOpacity(0.5)
+                                                          : Colors
+                                                              .blueGrey.shade50,
+                                                      width: selected ? 2 : 1,
+                                                    ),
+                                                  ),
+                                                  child: Icon(
+                                                    selected
+                                                        ? Icons
+                                                            .check_circle_rounded
+                                                        : Icons
+                                                            .local_shipping_rounded,
+                                                    color: selected
+                                                        ? themeBlue
+                                                        : Colors.blueGrey[400],
+                                                    size: 26,
                                                   ),
                                                 ),
+                                                SizedBox(width: 16),
+                                                // Main content
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      // Scan order badge
+                                                      if (item["scanOrder"] !=
+                                                          null)
+                                                        Container(
+                                                          margin:
+                                                              EdgeInsets.only(
+                                                                  bottom: 7),
+                                                          padding: EdgeInsets
+                                                              .symmetric(
+                                                                  horizontal:
+                                                                      11,
+                                                                  vertical: 4),
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            gradient:
+                                                                LinearGradient(
+                                                              colors:
+                                                                  selected
+                                                                      ? [
+                                                                          themeBlue
+                                                                              .withOpacity(0.23),
+                                                                          Colors
+                                                                              .deepPurple
+                                                                              .withOpacity(0.13)
+                                                                        ]
+                                                                      : [
+                                                                          Colors
+                                                                              .blueAccent
+                                                                              .withOpacity(0.13),
+                                                                          Colors
+                                                                              .blueGrey
+                                                                              .withOpacity(0.09)
+                                                                        ],
+                                                              begin: Alignment
+                                                                  .topLeft,
+                                                              end: Alignment
+                                                                  .bottomRight,
+                                                            ),
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        10),
+                                                          ),
+                                                          child: Row(
+                                                            mainAxisSize:
+                                                                MainAxisSize
+                                                                    .min,
+                                                            children: [
+                                                              Icon(
+                                                                  Icons
+                                                                      .qr_code_2_rounded,
+                                                                  size: 13,
+                                                                  color: selected
+                                                                      ? themeBlue
+                                                                      : Colors
+                                                                          .blueAccent
+                                                                          .shade200),
+                                                              SizedBox(
+                                                                  width: 5),
+                                                              Text(
+                                                                "Scan #${item["scanOrder"]}",
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontFamily:
+                                                                      'Montserrat',
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                  fontSize: 12,
+                                                                  color: selected
+                                                                      ? themeBlue
+                                                                      : Colors
+                                                                          .blueAccent
+                                                                          .shade400,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      // Address
+                                                      Text(
+                                                        item["address"],
+                                                        style: TextStyle(
+                                                          fontWeight: selected
+                                                              ? FontWeight.w700
+                                                              : FontWeight.w600,
+                                                          fontSize: 15.5,
+                                                          color: Colors
+                                                              .blueGrey[800],
+                                                          fontFamily:
+                                                              'Montserrat',
+                                                          height: 1.38,
+                                                          letterSpacing: 0.01,
+                                                        ),
+                                                        maxLines: 2,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                      ),
+                                                      SizedBox(height: 10),
+                                                      // Distance info
+                                                      Row(
+                                                        children: [
+                                                          Container(
+                                                            padding: EdgeInsets
+                                                                .symmetric(
+                                                                    horizontal:
+                                                                        11,
+                                                                    vertical:
+                                                                        5),
+                                                            decoration:
+                                                                BoxDecoration(
+                                                              color: distance !=
+                                                                      null
+                                                                  ? (selected
+                                                                      ? Colors
+                                                                          .deepPurple
+                                                                          .withOpacity(
+                                                                              0.13)
+                                                                      : Colors
+                                                                          .deepPurple
+                                                                          .withOpacity(
+                                                                              0.07))
+                                                                  : (selected
+                                                                      ? Colors
+                                                                          .blueGrey
+                                                                          .withOpacity(
+                                                                              0.13)
+                                                                      : Colors
+                                                                          .blueGrey
+                                                                          .withOpacity(
+                                                                              0.07)),
+                                                              borderRadius:
+                                                                  BorderRadius
+                                                                      .circular(
+                                                                          20),
+                                                            ),
+                                                            child: Row(
+                                                              mainAxisSize:
+                                                                  MainAxisSize
+                                                                      .min,
+                                                              children: [
+                                                                Icon(
+                                                                  Icons
+                                                                      .directions_car_filled_rounded,
+                                                                  size: 15,
+                                                                  color: distance !=
+                                                                          null
+                                                                      ? (selected
+                                                                          ? Colors
+                                                                              .deepPurple
+                                                                              .shade500
+                                                                          : Colors
+                                                                              .deepPurple
+                                                                              .shade300)
+                                                                      : (selected
+                                                                          ? Colors
+                                                                              .blueGrey
+                                                                              .shade500
+                                                                          : Colors
+                                                                              .blueGrey[300]),
+                                                                ),
+                                                                SizedBox(
+                                                                    width: 7),
+                                                                Text(
+                                                                  distance !=
+                                                                          null
+                                                                      ? "${distance.toStringAsFixed(1)} km"
+                                                                      : "Calculating...",
+                                                                  style:
+                                                                      TextStyle(
+                                                                    color: distance !=
+                                                                            null
+                                                                        ? (selected
+                                                                            ? Colors
+                                                                                .deepPurple.shade600
+                                                                            : Colors
+                                                                                .deepPurple.shade400)
+                                                                        : (selected
+                                                                            ? Colors.blueGrey.shade600
+                                                                            : Colors.blueGrey[400]),
+                                                                    fontSize:
+                                                                        13.5,
+                                                                    fontFamily:
+                                                                        'Montserrat',
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .w600,
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                SizedBox(width: 10),
+                                                if (selectionMode)
+                                                  Checkbox(
+                                                    value: selected,
+                                                    activeColor: themeBlue,
+                                                    onChanged: (bool? value) {
+                                                      setState(() {
+                                                        if (value == true) {
+                                                          selectedItems.add(id);
+                                                        } else {
+                                                          selectedItems
+                                                              .remove(id);
+                                                          if (selectedItems
+                                                              .isEmpty)
+                                                            selectionMode =
+                                                                false;
+                                                        }
+                                                      });
+                                                    },
+                                                    visualDensity: VisualDensity
+                                                        .comfortable,
+                                                    side: BorderSide(
+                                                        color: selected
+                                                            ? themeBlue
+                                                                .withOpacity(
+                                                                    0.7)
+                                                            : Colors.blueGrey
+                                                                .shade300,
+                                                        width: 1.8),
+                                                    shape:
+                                                        RoundedRectangleBorder(
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        5)),
+                                                  )
+                                                else
+                                                  Icon(
+                                                      Icons
+                                                          .arrow_forward_ios_rounded,
+                                                      color:
+                                                          Colors.blueGrey[300],
+                                                      size: 20),
                                               ],
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
-                                    trailing: selectionMode
-                                        ? AbsorbPointer(
-                                            child: Checkbox(
-                                              value: selected,
-                                              activeColor: themeBlue,
-                                              onChanged: (bool? value) {},
-                                              visualDensity: VisualDensity.compact,
-                                              side: BorderSide(color: Colors.blueGrey.shade200, width: 1),
-                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
-                                            ),
-                                          )
-                                        : Icon(Icons.chevron_right_rounded, color: Colors.blueGrey[200], size: 20),
-                                  ),
-                                ),
-                              ),
+                                        ))),
+                              ],
                             ),
-                          )
+                          ),
                         );
-                        },
-                      ),
+                      },
                     ),
+                  ),
       ),
       floatingActionButton: Container(
         width: 62,
@@ -1333,8 +1691,10 @@ class _ParcelScanningState extends State<ParcelScanning> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: <Widget>[
-              _buildBottomNavItem(Icons.ballot_outlined, "Optimize", 0, themeBlue),
-              _buildBottomNavItem(Icons.explore_outlined, "View Route", 2, themeBlue),
+              _buildBottomNavItem(
+                  Icons.ballot_outlined, "Optimize", 0, themeBlue),
+              _buildBottomNavItem(
+                  Icons.explore_outlined, "View Route", 2, themeBlue),
             ],
           ),
         ),
@@ -1353,8 +1713,9 @@ class _ParcelScanningState extends State<ParcelScanning> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            if (isLoading && index != 1)
+            if (isLoading && index != 1) {
               return; // Allow scan even if loading other things
+            }
 
             switch (index) {
               case 0:
@@ -1426,3 +1787,4 @@ class _DebounceTimer {
   Timer? _timer;
   void cancel() => _timer?.cancel();
 }
+

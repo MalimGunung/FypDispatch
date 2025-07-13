@@ -41,6 +41,8 @@ class MainApp extends StatelessWidget {
 }
 
 class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -59,6 +61,8 @@ class AuthGate extends StatelessWidget {
 }
 
 class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -311,11 +315,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                 : null,
                             backgroundColor:
                                 photoURL == null ? Colors.indigo[100] : null,
+                            radius: 22,
                             child: photoURL == null
                                 ? Icon(Icons.person,
                                     color: Colors.indigo[600], size: 20)
                                 : null,
-                            radius: 22,
                           ),
                         )
                       else
@@ -581,60 +585,64 @@ class _HomeScreenState extends State<HomeScreen> {
       physics: BouncingScrollPhysics(),
       padding: EdgeInsets.only(top: 8, left: 8, right: 8, bottom: 24),
       children: [
-        // Section divider
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Divider(
-            thickness: 2,
-            color: Colors.indigo[100],
-            endIndent: 80,
-            indent: 8,
-          ),
-        ),
         // Previous Route Summary
         if (routeSummary != null)
           Card(
-            elevation: 6,
+            elevation: 8,
             shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
             margin: EdgeInsets.only(bottom: 18),
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(24),
                 gradient: LinearGradient(
-                  colors: [Colors.indigo.shade50, Colors.indigo.shade100],
+                  colors: [
+                    Colors.indigo.shade400,
+                    Colors.blue.shade500
+                  ], // Changed color
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.indigo.withOpacity(0.07),
-                    blurRadius: 12,
-                    offset: Offset(0, 4),
+                    color: Colors.indigo.withOpacity(0.2), // Changed color
+                    blurRadius: 16,
+                    offset: Offset(0, 6),
                   ),
                 ],
               ),
               child: Padding(
-                padding: EdgeInsets.all(24),
+                padding: EdgeInsets.all(24), // Reduced padding
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.history,
-                            color: Colors.indigo[700], size: 30),
-                        SizedBox(width: 14),
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white
+                                .withOpacity(0.25), // Changed style
+                          ),
+                          padding:
+                              EdgeInsets.all(10), // Adjusted padding
+                          child: Icon(Icons.history,
+                              color: Colors.white,
+                              size: 28), // Adjusted size
+                        ),
+                        SizedBox(width: 12), // Reduced size
                         Text(
                           "Previous Route",
                           style: TextStyle(
-                            fontSize: 22,
+                            fontSize: 20, // Adjusted size
                             fontWeight: FontWeight.bold,
-                            color: Colors.indigo[800],
+                            color: Colors.white, // Changed color
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 14),
+                    SizedBox(height: 16), // Reduced size
                     _buildSummaryRow(Icons.directions_car,
                         "Distance: ${(routeSummary!['distance'] as num).toStringAsFixed(1)} km"),
                     _buildSummaryRow(Icons.timer_outlined,
@@ -648,59 +656,53 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         // Total Routes Summary
         Card(
-          elevation: 6,
+          elevation: 4,
           shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           margin: EdgeInsets.only(bottom: 18),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
-              gradient: LinearGradient(
-                colors: [Colors.deepPurple.shade50, Colors.deepPurple.shade100],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.deepPurple.withOpacity(0.07),
-                  blurRadius: 12,
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.assessment,
-                          color: Colors.deepPurple[700], size: 30),
-                      SizedBox(width: 14),
-                      Text(
-                        "Lifetime Summary",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.deepPurple[800],
-                        ),
+          color: Colors.white, // Changed to solid color
+          child: Padding(
+            padding: EdgeInsets.all(24), // Reduced padding
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.indigo.shade50, // Changed style
                       ),
-                    ],
-                  ),
-                  SizedBox(height: 14),
-                  _buildSummaryRow(Icons.directions_car,
-                      "Total Distance: ${totalDistance.toStringAsFixed(1)} km"),
-                  _buildSummaryRow(
-                      Icons.timer_outlined, "Total Time: $totalTime minutes"),
-                  _buildSummaryRow(Icons.location_on_outlined,
-                      "Total Addresses: $totalAddresses"),
-                ],
-              ),
+                      padding:
+                          EdgeInsets.all(10), // Adjusted padding
+                      child: Icon(Icons.assessment,
+                          color: Colors.indigo.shade400,
+                          size: 28), // Adjusted size
+                    ),
+                    SizedBox(width: 12), // Reduced size
+                    Text(
+                      "Lifetime Summary",
+                      style: TextStyle(
+                        fontSize: 20, // Adjusted size
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2C3E50),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 16), // Reduced size
+                _buildSummaryRow(Icons.directions_car,
+                    "Total Distance: ${totalDistance.toStringAsFixed(1)} km"),
+                _buildSummaryRow(
+                    Icons.timer_outlined, "Total Time: $totalTime minutes"),
+                _buildSummaryRow(Icons.location_on_outlined,
+                    "Total Addresses: $totalAddresses"),
+              ],
             ),
           ),
         ),
-        SizedBox(height: 20),
+        SizedBox(height: 16), // Reduced size
         Divider(thickness: 1, color: Colors.grey[300]),
         SizedBox(height: 10),
 
@@ -709,11 +711,18 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 0),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.95),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.indigo.withOpacity(0.08)),
+              color: Colors.white.withOpacity(0.98),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.indigo.withOpacity(0.10)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.indigo.withOpacity(0.06),
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+            padding: EdgeInsets.symmetric(horizontal: 14, vertical: 4),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -721,22 +730,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     value: selectedFilter,
-                    icon: Icon(Icons.filter_list_rounded, color: Colors.indigo[400], size: 20),
+                    icon: Icon(Icons.filter_alt_rounded,
+                        color: Colors.indigo[400], size: 22),
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                       color: Colors.indigo[700],
                       fontFamily: 'Inter',
                     ),
                     dropdownColor: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                     items: [
                       DropdownMenuItem(
                         value: "All",
                         child: Row(
                           children: [
-                            Icon(Icons.all_inclusive, color: Colors.indigo[300], size: 16),
-                            SizedBox(width: 5),
+                            Icon(Icons.all_inclusive,
+                                color: Colors.indigo[300], size: 18),
+                            SizedBox(width: 6),
                             Text("All"),
                           ],
                         ),
@@ -745,8 +756,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         value: "Today",
                         child: Row(
                           children: [
-                            Icon(Icons.today_rounded, color: Colors.indigo[300], size: 16),
-                            SizedBox(width: 5),
+                            Icon(Icons.today_rounded,
+                                color: Colors.indigo[300], size: 18),
+                            SizedBox(width: 6),
                             Text("Today"),
                           ],
                         ),
@@ -755,8 +767,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         value: "This Week",
                         child: Row(
                           children: [
-                            Icon(Icons.calendar_view_week_rounded, color: Colors.indigo[300], size: 16),
-                            SizedBox(width: 5),
+                            Icon(Icons.calendar_view_week_rounded,
+                                color: Colors.indigo[300], size: 18),
+                            SizedBox(width: 6),
                             Text("This Week"),
                           ],
                         ),
@@ -773,22 +786,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 Container(
                   height: 28,
                   width: 1,
-                  color: Colors.indigo.withOpacity(0.08),
-                  margin: EdgeInsets.symmetric(horizontal: 8),
+                  color: Colors.indigo.withOpacity(0.10),
+                  margin: EdgeInsets.symmetric(horizontal: 10),
                 ),
                 // Sort Button (minimal)
                 TextButton.icon(
                   icon: Icon(
-                    isAscending ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                    isAscending
+                        ? Icons.arrow_upward_rounded
+                        : Icons.arrow_downward_rounded,
                     color: Colors.indigo[600],
-                    size: 18,
+                    size: 20,
                   ),
                   label: Text(
                     isAscending ? "Oldest" : "Newest",
                     style: TextStyle(
                       color: Colors.indigo[700],
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
                       fontFamily: 'Inter',
                     ),
                   ),
@@ -798,10 +813,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     });
                   },
                   style: TextButton.styleFrom(
-                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    backgroundColor: Colors.transparent,
+                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    backgroundColor: Colors.indigo.withOpacity(0.07),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     elevation: 0,
                     shadowColor: Colors.transparent,
@@ -836,7 +851,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Center(
               child: Column(
                 children: [
-                  Icon(Icons.map_outlined, size: 54, color: Colors.indigo[100]),
+                  Icon(Icons.map_outlined,
+                      size: 54, color: Colors.indigo[100]),
                   SizedBox(height: 10),
                   Text(
                     "No dispatch history yet.",
@@ -854,130 +870,85 @@ class _HomeScreenState extends State<HomeScreen> {
         else
           ...filteredRoutes.map((route) {
             final routeDate = DateTime.parse(route['timestamp']);
-            return AnimatedContainer(
-                duration: Duration(milliseconds: 250),
-                curve: Curves.easeIn,
-                child: Container(
-                  margin: EdgeInsets.only(bottom: 18, left: 2, right: 2),
+            return Card(
+              elevation: 2,
+              shadowColor: Colors.indigo.withOpacity(0.1),
+              margin: EdgeInsets.only(
+                  bottom: 16, left: 2, right: 2), // Reduced bottom margin
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20), // Adjusted radius
+                side: BorderSide(color: const Color.fromARGB(255, 40, 103, 138), width: 1),
+              ),
+              child: ListTile(
+                contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 12), // Adjusted padding
+                leading: Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.indigo.shade100.withOpacity(0.7),
-                        Colors.blue.shade100.withOpacity(0.5),
-                        Colors.white.withOpacity(0.85),
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                    color: Colors.indigo.shade50, // Changed style
+                    borderRadius:
+                        BorderRadius.circular(16), // Changed shape
+                  ),
+                  padding: EdgeInsets.all(12),
+                  child: Icon(Icons.route_outlined,
+                      color: Colors.indigo.shade400,
+                      size: 28), // Changed color and size
+                ),
+                title: Padding(
+                  padding:
+                      const EdgeInsets.only(bottom: 4.0), // Adjusted padding
+                  child: Text(
+                    "Route on ${routeDate.toLocal().toString().split(' ')[0]}",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800, // Adjusted weight
+                      fontSize: 16, // Adjusted size
+                      color: Color(0xFF2C3E50), // Adjusted color
                     ),
-                    border: Border(
-                      left: BorderSide(
-                        color: Colors.indigo.shade400,
-                        width: 5,
+                  ),
+                ),
+                subtitle: Padding(
+                  padding:
+                      const EdgeInsets.only(top: 4.0), // Adjusted padding
+                  child: Row(
+                    children: [
+                      Icon(Icons.directions_car,
+                          size: 16, color: Colors.grey[600]),
+                      SizedBox(width: 4),
+                      Text(
+                        "${(route['distance'] as num).toStringAsFixed(1)} km",
+                        style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            color: Colors.grey[800]), // Adjusted style
                       ),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.indigo.withOpacity(0.10),
-                        blurRadius: 18,
-                        offset: Offset(0, 6),
-                      ),
+                      SizedBox(width: 12), // Reduced size
+                      Icon(Icons.timer_outlined,
+                          size: 16, color: Colors.grey[600]),
+                      SizedBox(width: 4),
+                      Text("${route['time']} min",
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: Colors.grey[800])), // Adjusted style
+                      SizedBox(width: 12), // Reduced size
+                      Icon(Icons.location_on_outlined,
+                          size: 16, color: Colors.grey[600]),
+                      SizedBox(width: 4),
+                      Text("${route['totalAddresses']}",
+                          style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              color: Colors.grey[800])), // Adjusted style
                     ],
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                      child: ListTile(
-                        contentPadding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                        leading: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.indigo.shade400,
-                                Colors.blue.shade300
-                              ],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.indigo.withOpacity(0.13),
-                                blurRadius: 10,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          padding: EdgeInsets.all(10),
-                          child: Icon(Icons.route_outlined,
-                              color: Colors.white, size: 28),
-                        ),
-                        title: Padding(
-                          padding: const EdgeInsets.only(bottom: 2.0),
-                          child: Text(
-                            "Route on ${routeDate.toLocal().toString().split(' ')[0]}",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                              color: Colors.indigo[900],
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ),
-                        subtitle: Padding(
-                          padding: const EdgeInsets.only(top: 4.0),
-                          child: Row(
-                            children: [
-                              Icon(Icons.directions_car,
-                                  size: 15, color: Colors.indigo[400]),
-                              SizedBox(width: 3),
-                              Text(
-                                "${(route['distance'] as num).toStringAsFixed(1)} km",
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w700, fontSize: 14, color: Colors.indigo[700]),
-                              ),
-                              SizedBox(width: 12),
-                              Icon(Icons.timer_outlined,
-                                  size: 15, color: Colors.indigo[400]),
-                              SizedBox(width: 3),
-                              Text("${route['time']} min",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w700, fontSize: 14, color: Colors.indigo[700])),
-                              SizedBox(width: 12),
-                              Icon(Icons.location_on_outlined,
-                                  size: 15, color: Colors.indigo[400]),
-                              SizedBox(width: 3),
-                              Text("${route['totalAddresses']}",
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.w700, fontSize: 14, color: Colors.indigo[700])),
-                            ],
-                          ),
-                        ),
-                        trailing: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.7),
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.indigo.withOpacity(0.08),
-                                blurRadius: 6,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-                          child: Icon(Icons.arrow_forward_ios,
-                              size: 15, color: Colors.indigo[400]),
-                        ),
-                        onTap: () {
-                          // Optional: Navigate to a detailed view of the route
-                        },
-                      ),
-                    ),
-                  ),
-                ));
-          }).toList(),
+                ),
+                trailing: Icon(Icons.arrow_forward_ios,
+                    size: 16, color: Colors.grey[400]), // Adjusted style
+                onTap: () {
+                  // Optional: Navigate to a detailed view of the route
+                },
+              ),
+            );
+          }),
       ],
     );
   }

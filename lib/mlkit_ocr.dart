@@ -262,19 +262,27 @@ class EnhancedMLKitOCR {
     
     // Building names
     if (lower.contains('apartment') || lower.contains('pangsapuri') || 
-        lower.contains('menara') || lower.contains('wisma')) return 2;
+        lower.contains('menara') || lower.contains('wisma')) {
+      return 2;
+    }
     
     // Street addresses
     if (lower.startsWith('jalan') || lower.startsWith('lorong') || 
-        lower.startsWith('no')) return 3;
+        lower.startsWith('no')) {
+      return 3;
+    }
     
     // Areas/Districts
     if (lower.contains('taman') || lower.contains('bandar') || 
-        lower.contains('seksyen')) return 4;
+        lower.contains('seksyen')) {
+      return 4;
+    }
     
     // Cities/States
     if (lower.contains('selangor') || lower.contains('kuala lumpur') || 
-        lower.contains('johor')) return 5;
+        lower.contains('johor')) {
+      return 5;
+    }
     
     // Country
     if (lower.contains('malaysia')) return 6;

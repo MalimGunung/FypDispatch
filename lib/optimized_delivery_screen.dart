@@ -10,11 +10,11 @@ class OptimizedDeliveryScreen extends StatefulWidget {
   final String userEmail;
   final bool forceReoptimize;
 
-  OptimizedDeliveryScreen({
-    Key? key,
+  const OptimizedDeliveryScreen({
+    super.key,
     required this.userEmail,
     this.forceReoptimize = false,
-  }) : super(key: key);
+  });
 
   // Static cache for optimization results
   static List<Map<String, dynamic>>? _cachedRoute;
@@ -212,7 +212,7 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
       builder: (context) {
         return Dialog(
           insetPadding: EdgeInsets.all(12),
-          child: Container(
+          child: SizedBox(
             width: double.infinity,
             height: 400,
             child: GoogleMap(
@@ -338,7 +338,7 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                       child: GestureDetector(
                         // Remove AbsorbPointer so the map is interactive and toolbar works
                         onTap: () => _showFullMapDialog(latitude, longitude),
-                        child: Container(
+                        child: SizedBox(
                           width: double.infinity,
                           height: 170, // Adjusted height
                           child: GoogleMap(
@@ -388,14 +388,14 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                         _buildDetailRow(
                           Icons.gps_fixed_rounded, // Updated icon
                           "Latitude:",
-                          "${latitude.toStringAsFixed(5)}",
+                          latitude.toStringAsFixed(5),
                           Colors.blueAccent.shade700,
                         ),
                         SizedBox(height: 12), // Adjusted spacing
                         _buildDetailRow(
                           Icons.explore_rounded, // Updated icon
                           "Longitude:",
-                          "${longitude.toStringAsFixed(5)}",
+                          longitude.toStringAsFixed(5),
                           Colors.blueAccent.shade700,
                         ),
                         if (distance != null)
@@ -424,16 +424,6 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                       alignment: Alignment.centerRight,
                       child: ElevatedButton(
                         // Changed to ElevatedButton for a more defined look
-                        child: Text(
-                          "CLOSE",
-                          style: TextStyle(
-                            // color: Colors.white, // Text color is handled by ElevatedButton's foregroundColor
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Montserrat',
-                            fontSize: 14, // Slightly smaller
-                            letterSpacing: 0.5,
-                          ),
-                        ),
                         onPressed: () => Navigator.of(context).pop(),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.blueAccent.shade400,
@@ -445,6 +435,17 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                                 BorderRadius.circular(12), // More rounded
                           ),
                           elevation: 3,
+                        ),
+                        // Changed to ElevatedButton for a more defined look
+                        child: Text(
+                          "CLOSE",
+                          style: TextStyle(
+                            // color: Colors.white, // Text color is handled by ElevatedButton's foregroundColor
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Montserrat',
+                            fontSize: 14, // Slightly smaller
+                            letterSpacing: 0.5,
+                          ),
                         ),
                       ),
                     ),
@@ -780,7 +781,7 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                                               Text(
                                                 index == 0
                                                     ? "From Current Location: ${distance.toStringAsFixed(1)} km"
-                                                    : "From Stop ${index}: ${distance.toStringAsFixed(1)} km",
+                                                    : "From Stop $index: ${distance.toStringAsFixed(1)} km",
                                                 style: TextStyle(
                                                   fontSize: 13.5,
                                                   color: Colors

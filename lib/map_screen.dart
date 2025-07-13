@@ -13,7 +13,7 @@ import 'dart:ui' as ui; // <-- Add this import for custom marker generation
 
 class MapScreen extends StatefulWidget {
   final String userEmail;
-  MapScreen({Key? key, required this.userEmail}) : super(key: key);
+  const MapScreen({super.key, required this.userEmail});
 
   @override
   _MapScreenState createState() => _MapScreenState();
@@ -1399,8 +1399,9 @@ class _MapScreenState extends State<MapScreen> {
                                       // <-- Show list if not loading and has stops
                                       onReorder: (int oldIndex, int newIndex) {
                                         setState(() {
-                                          if (newIndex > oldIndex)
+                                          if (newIndex > oldIndex) {
                                             newIndex -= 1;
+                                          }
                                           final item =
                                               deliveryPoints.removeAt(oldIndex);
                                           final address = deliveryAddresses
