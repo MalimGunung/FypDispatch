@@ -98,20 +98,24 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
 
       List<double?> distances = [];
       double calculatedTotalDistance = 0.0;
+      double calculatedTotalDuration = 0.0;
       if (currentPosition != null && route.isNotEmpty) {
         setState(() {
           loadingMessage = "Calculating road distance 1 of ${route.length}...";
           loadingProgress = 0.5 + (0.5 * (1 / route.length));
         });
-        double? initialDist = await _getORSRoadDistance(
+        var result = await _getORSRoadDistanceAndDuration(
           currentPosition!.latitude,
           currentPosition!.longitude,
           route[0]['latitude'],
           route[0]['longitude'],
         );
-        distances.add(initialDist);
-        if (initialDist != null) {
-          calculatedTotalDistance += initialDist;
+        distances.add(result['distance']);
+        if (result['distance'] != null) {
+          calculatedTotalDistance += result['distance']!;
+        }
+        if (result['duration'] != null) {
+          calculatedTotalDuration += result['duration']!;
         }
 
         for (int i = 0; i < route.length - 1; i++) {
@@ -120,15 +124,18 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                 "Calculating road distance ${i + 2} of ${route.length}...";
             loadingProgress = 0.5 + (0.5 * ((i + 2) / route.length));
           });
-          double? dist = await _getORSRoadDistance(
+          var result = await _getORSRoadDistanceAndDuration(
             route[i]['latitude'],
             route[i]['longitude'],
             route[i + 1]['latitude'],
             route[i + 1]['longitude'],
           );
-          distances.add(dist);
-          if (dist != null) {
-            calculatedTotalDistance += dist;
+          distances.add(result['distance']);
+          if (result['distance'] != null) {
+            calculatedTotalDistance += result['distance']!;
+          }
+          if (result['duration'] != null) {
+            calculatedTotalDuration += result['duration']!;
           }
         }
       } else if (route.isEmpty) {
@@ -138,17 +145,19 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
       }
 
       String estimatedTimeStr = "N/A";
-      if (route.isNotEmpty && calculatedTotalDistance > 0) {
-        double drivingHours = calculatedTotalDistance / 40.0;
-        double stopMinutes = route.length * 5.0;
-        double totalMinutes = (drivingHours * 60) + stopMinutes;
-
+      if (route.isNotEmpty && calculatedTotalDuration > 0) {
+        // Only use ORS duration, do NOT add stop time
+        double totalMinutes = calculatedTotalDuration;
         int hours = totalMinutes ~/ 60;
         int minutes = (totalMinutes % 60).round();
+        if (minutes == 60) {
+          hours += 1;
+          minutes = 0;
+        }
         estimatedTimeStr = "${hours}h ${minutes}m";
       } else if (route.isNotEmpty &&
           calculatedTotalDistance == 0 &&
-          orsDistances.any((d) => d == null)) {
+          distances.any((d) => d == null)) {
         estimatedTimeStr = "Partial data";
       }
 
@@ -182,7 +191,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
     '5b3ce3597851110001cf6248dab480f8ea3f4444be33bffab7bd37cb'
   ];
 
-  Future<double?> _getORSRoadDistance(
+  // Change return type to Map<String, double?> for distance and duration
+  Future<Map<String, double?>> _getORSRoadDistanceAndDuration(
       double lat1, double lon1, double lat2, double lon2) async {
     for (final apiKey in _orsApiKeys) {
       final url =
@@ -191,19 +201,21 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
         final response = await http.get(Uri.parse(url));
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
-          final distanceMeters =
-              data['features'][0]['properties']['segments'][0]['distance'];
-          return distanceMeters / 1000.0; // return in KM
+          final segment = data['features'][0]['properties']['segments'][0];
+          final distanceMeters = segment['distance'];
+          final durationSeconds = segment['duration'];
+          return {
+            'distance': distanceMeters / 1000.0, // km
+            'duration': durationSeconds / 60.0,   // minutes
+          };
         } else {
           print("❌ ORS API Error (key $apiKey): ${response.body}");
-          // If rate limit or error, try next key
         }
       } catch (e) {
         print("❌ ORS Request Error (key $apiKey): $e");
-        // Try next key
       }
     }
-    return null;
+    return {'distance': null, 'duration': null};
   }
 
   void _showFullMapDialog(double latitude, double longitude) {
@@ -621,9 +633,8 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
                           _buildSummaryItem(
                               Icons.timer_outlined,
                               _estimatedTotalTime,
-                              "Est. Time",
-                              Colors.deepPurple
-                                  .shade400), // Changed to deepPurple for consistency
+                              "Est. Time", // <-- Make sure this does NOT say "(incl. stops)"
+                              Colors.deepPurple.shade400),
                         ],
                       ),
                     ),
@@ -883,3 +894,4 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
     );
   }
 }
+

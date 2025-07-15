@@ -144,18 +144,17 @@ class _MapScreenState extends State<MapScreen> {
         final response = await http.get(Uri.parse(orsUrl));
         if (response.statusCode == 200) {
           final data = json.decode(response.body);
-          double distanceMeters =
-              data['features'][0]['properties']['summary']['distance'];
-          double distanceKm = distanceMeters / 1000.0;
-          double drivingHours = distanceKm / _averageSpeedKmH;
-          int minutes = (drivingHours * 60).round();
+          // Use ORS API's duration (in seconds)
+          double durationSeconds =
+              data['features'][0]['properties']['segments'][0]['duration'];
+          int minutes = (durationSeconds / 60).round();
           if (mounted) {
             setState(() {
               estimatedTime = "$minutes min";
             });
           }
           print(
-              "🕒 ORS Estimated Time to Next Stop: $estimatedTime ($distanceKm km)");
+              "🕒 ORS Estimated Time to Next Stop: $estimatedTime (duration: $durationSeconds seconds)");
           return;
         } else {
           print(
@@ -1600,3 +1599,4 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 }
+
