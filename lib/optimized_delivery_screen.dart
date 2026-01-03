@@ -146,7 +146,6 @@ class _OptimizedDeliveryScreenState extends State<OptimizedDeliveryScreen> {
 
       String estimatedTimeStr = "N/A";
       if (route.isNotEmpty && calculatedTotalDuration > 0) {
-        // Only use ORS duration, do NOT add stop time
         double totalMinutes = calculatedTotalDuration;
         int hours = totalMinutes ~/ 60;
         int minutes = (totalMinutes % 60).round();

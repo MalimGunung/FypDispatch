@@ -43,7 +43,6 @@ class _MapScreenState extends State<MapScreen> {
     '5b3ce3597851110001cf6248014503d6bb042740758494cf91a36816644b5aba3fbc5e56ca3d9bfb',
     '5b3ce3597851110001cf6248dab480f8ea3f4444be33bffab7bd37cb'
   ];
-  static const double _averageSpeedKmH = 40.0; // Average speed in km/h
 
   String estimatedTime = "Calculating..."; // ✅ Default ETA text
   DateTime startTime = DateTime.now(); // <-- Add this line to define startTime
@@ -176,7 +175,6 @@ class _MapScreenState extends State<MapScreen> {
 
     LatLng currentLocation = LatLng(position.latitude, position.longitude);
 
-    // --- Find the nearest stop within 50 meters ---
     int? nearestIndex;
     double minDistance = double.infinity;
     for (int i = 0; i < deliveryPoints.length; i++) {
@@ -194,8 +192,8 @@ class _MapScreenState extends State<MapScreen> {
 
     print("📍 Nearest stop is at index $nearestIndex, distance: ${minDistance.toStringAsFixed(2)} meters");
 
-    // Only proceed if within 50 meters of any stop
-    if (nearestIndex != null && minDistance < 50) {
+    // Only proceed if within 30 meters of any stop
+    if (nearestIndex != null && minDistance < 30) {
       print("✅ Arrived at stop index $nearestIndex!");
 
       bool proceed = await _showProceedToNextStopDialog();
@@ -478,7 +476,6 @@ class _MapScreenState extends State<MapScreen> {
     return total;
   }
 
-  // --- Add this helper ---
   Future<double?> _getORSRoadDistance(
       double lat1, double lon1, double lat2, double lon2) async {
     // Use round-robin for each request, but fallback if error
@@ -1264,41 +1261,31 @@ class _MapScreenState extends State<MapScreen> {
                 Expanded(
                   flex: 4,
                   child: Padding(
-                    // Add padding around the map container
                     padding: const EdgeInsets.all(12.0),
                     child: ClipRRect(
                       borderRadius:
-                          BorderRadius.circular(18), // Consistent rounding
+                          BorderRadius.circular(18), 
                       child: Stack(
-                        // <-- Use Stack to overlay loading indicator
                         children: [
-                          // Remove Listener and its handlers, just use GoogleMap directly
                           GoogleMap(
-                            initialCameraPosition: CameraPosition(
-                              target: LatLng(
-                                currentPosition?.latitude ?? 3.1390,
-                                currentPosition?.longitude ?? 101.6869,
-                              ),
-                              zoom: 12,
-                            ),
-                            markers: markers,
-                            polylines: polylines,
-                            myLocationEnabled: true,
-                            myLocationButtonEnabled: true,
-                            mapToolbarEnabled: false,
-                            zoomControlsEnabled: false,
-                            onMapCreated: (controller) {
-                              setState(() {
-                                mapController = controller;
-                              });
-                              // Auto-fetch and draw route once map is ready
-                              // if (hasStartedDelivery && deliveryPoints.isEmpty) {
-                              //    fetchDeliveryLocations(); // Already called in initState or after frame callback
-                              // }
-                            },
-                            // ...existing code...
+                          initialCameraPosition: CameraPosition(
+                            target: currentPosition != null
+                              ? LatLng(currentPosition!.latitude, currentPosition!.longitude)
+                              : LatLng(3.1390, 101.6869), 
+                            zoom: 16.5, 
                           ),
-                          // ...existing code...
+                          markers: markers,
+                          polylines: polylines,
+                          myLocationEnabled: true,
+                          myLocationButtonEnabled: true,
+                          mapToolbarEnabled: false,
+                          zoomControlsEnabled: false,
+                          onMapCreated: (controller) {
+                            setState(() {
+                            mapController = controller;
+                            });
+                          },
+                          ),
                         ],
                       ),
                     ),
@@ -1573,7 +1560,7 @@ class _MapScreenState extends State<MapScreen> {
                         },
                   icon: Icon(Icons.navigation_outlined, size: 24),
                   label: Text(
-                    "START NAVIGATION",
+                    "Navigate With Google Maps",
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,

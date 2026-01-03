@@ -133,7 +133,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
     }
   }
 
-  // ✅ Capture and scan an address from an image
+  // Capture and scan an address from an image
   Future<void> scanParcel() async {
     final ImagePicker picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.camera);
@@ -252,17 +252,14 @@ class _ParcelScanningState extends State<ParcelScanning> {
       }
       address = confirmedAddress;
 
-      // --- Remove label logic: do NOT add "scan one: ..." etc. ---
-      // address = "scan $labelWord: $address"; // <-- REMOVE this line
-
-      // Improved duplicate address check
+      // Duplicate address check
       final normalizedNewAddress = _normalizeAddress(address);
       bool isDuplicate = addressList.any((existingAddress) =>
           _normalizeAddress(existingAddress["address"].toString()) ==
           normalizedNewAddress);
 
       if (isDuplicate) {
-        setState(() => isLoading = false); // Hide loader before showing dialog
+        setState(() => isLoading = false);
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -270,7 +267,7 @@ class _ParcelScanningState extends State<ParcelScanning> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16.0),
               ),
-              backgroundColor: Color(0xFFFDFEFE), // Light background
+              backgroundColor: Color(0xFFFDFEFE), 
               titlePadding: const EdgeInsets.fromLTRB(24.0, 24.0, 24.0, 0.0),
               contentPadding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 24.0),
               actionsPadding: const EdgeInsets.fromLTRB(24.0, 0.0, 24.0, 16.0),
