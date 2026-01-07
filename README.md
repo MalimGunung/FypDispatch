@@ -1,4 +1,5 @@
-# fyp_gemini
+# Smart Dispatch
+# Mobile Application with Text Recognition and Map Navigation for Optimal Multi-Route Deliveries
 
 A new Flutter project.
 
